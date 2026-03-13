@@ -30,8 +30,10 @@ import frc.robot.subsystems.vision.LocalizationSystem;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import frc.robot.subsystems.Climb.Climb;
+import frc.robot.subsystems.Shooter.ShooterConstants;
 import frc.robot.subsystems.Indexer.Indexer;
 import frc.robot.subsystems.Intake.Intake;
+import frc.robot.subsystems.Intake.IntakeConstants;
 import frc.robot.subsystems.Shooter.Shooter;
 
 
@@ -127,6 +129,22 @@ public class RobotContainer {
     configureButtonBindings();
   }
 
+  //Autonomous Commands 
+
+  public Command intakeFuelCommand() {
+    return intake.setArmPosition(IntakeConstants.intakePosition).alongWith(
+        intake.runIntake(IntakeConstants.intakeVoltage)
+    );
+  }
+
+  public Command scoreFuelCommand() {
+    return shooter.setHoodAngle(ShooterConstants.HubScorePosition)
+        .alongWith(shooter.setFlywheelRPM(6000))
+        .alongWith(shooter.setRollerRPM(3000));
+  }
+
+  
+
   /**
    * Use this method to define your button->command mappings. Buttons can be created by
    * instantiating a {@link GenericHID} or one of its subclasses ({@link
@@ -181,7 +199,7 @@ public class RobotContainer {
     );
 
     controller.rightTrigger().whileTrue(
-        shooter.setRPMs(6000,3000)
+        shooter.setRPMs(4000,3000)
     );
 
     /*controller.povRight().whileTrue(
@@ -189,10 +207,10 @@ public class RobotContainer {
     ); */
 
     controller.povUp().whileTrue(
-        shooter.setHoodAngle(20)
+        shooter.setHoodAngle(10)
     );
     controller.povDown().whileTrue(
-        shooter.setHoodAngle(1.0)
+        shooter.setHoodAngle(8)
     );
     controller.a().whileTrue(
         intake.setArmPosition(0)
@@ -218,4 +236,7 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
+
 }
+
+ 

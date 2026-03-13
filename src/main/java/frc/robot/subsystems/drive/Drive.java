@@ -68,6 +68,9 @@ public class Drive extends SubsystemBase {
       };
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
+  
+  static final boolean isCanFD = false;
+  static final double ODOMETRY_FREQUENCY = isCanFD ? 250.0 : 100.0;
 
   public Drive(
       GyroIO gyroIO,
@@ -86,6 +89,8 @@ public class Drive extends SubsystemBase {
 
     // Start odometry thread
     SparkOdometryThread.getInstance().start();
+    PhoenixOdometryThread.getInstance().start();
+
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
@@ -119,17 +124,21 @@ public class Drive extends SubsystemBase {
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
+
   }
 
   @Override
   public void periodic() {
     
+    //System.out.println("ALSO THE SWERVE THING");
     odometryLock.lock(); // Prevents odometry updates while reading data
     gyroIO.updateInputs(gyroInputs);
     Logger.processInputs("Drive/Gyro", gyroInputs);
-    for (var module : modules) {
-      module.periodic();
+
+    for (int i = 0; i < 4; i++) {
+      modules[i].periodic();
     }
+
     odometryLock.unlock();
 
     // Stop moving when disabled
@@ -146,35 +155,45 @@ public class Drive extends SubsystemBase {
     }
 
     // Update odometry
+    //System.out.println("odo start update");
+    
     double[] sampleTimestamps =
         modules[0].getOdometryTimestamps(); // All signals are sampled together
+    // System.out.println("stuck -1");
     int sampleCount = sampleTimestamps.length;
+    // System.out.println("SCount" + sampleCount);
     for (int i = 0; i < sampleCount; i++) {
       // Read wheel positions and deltas from each module
       SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
       SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+      // System.out.println("stuck 1");
       for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
-        modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
-        moduleDeltas[moduleIndex] =
-            new SwerveModulePosition(
+        modulePositions[moduleIndex] = modules[moduleIndex].getPosition();
+        // System.out.println("stuck 2");
+        moduleDeltas[moduleIndex] =  
+        new SwerveModulePosition(
                 modulePositions[moduleIndex].distanceMeters
                     - lastModulePositions[moduleIndex].distanceMeters,
                 modulePositions[moduleIndex].angle);
-        lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
-      }
+        System.out.println("stuck 3");
+                lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+        // Apply update
+        //poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+        poseEstimator.update(rawGyroRotation, modulePositions);
+        System.out.println("DOING THE SWERVE THING");
+    }
 
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
-        rawGyroRotation = gyroInputs.odometryYawPositions[i];
+        rawGyroRotation = gyroInputs.odometryYawPositions[0];
       } else {
         // Use the angle delta from the kinematics and module deltas
         Twist2d twist = kinematics.toTwist2d(moduleDeltas);
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
 
-      // Apply update
-      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+      
     }
 
     // Update gyro alert

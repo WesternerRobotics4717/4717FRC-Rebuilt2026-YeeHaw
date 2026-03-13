@@ -151,6 +151,7 @@ public class Intake extends SubsystemBase {
     public Command intakeArmStop() {
       return this.runOnce(() -> armMoveMotor.set(0)); 
     }
+    
 
     public Command intakeSpin(double voltage) {
         return this.runEnd(() -> spinIntakeMotor.setVoltage(voltage), () -> spinIntakeMotor.setVoltage(0)
