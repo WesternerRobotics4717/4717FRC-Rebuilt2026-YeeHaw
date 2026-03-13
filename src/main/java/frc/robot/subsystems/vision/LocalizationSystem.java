@@ -57,8 +57,8 @@ private final QuestNav questNav;
 	private Matrix<N3, N1> pvStdDevs;
 	private Pose3d pvRobotPose = new Pose3d();
 	private boolean pvUseMeasurements;
-	private boolean sniperConnected = false;
-    private boolean nomConnected = false;
+	private boolean camera1Connected = false;
+    private boolean camera2Connected = false;
 	private boolean pvHasTarget = false;
 	private int pvBestTargetId = -1;
 
@@ -77,12 +77,12 @@ private final QuestNav questNav;
         cam2 = new PhotonCamera(PV_CAM_TWO);
 		cam1Estimator = new PhotonPoseEstimator(
 		  APRIL_TAG_FIELD_LAYOUT,
-		  ROBOT_TO_SNIPER
+		  ROBOT_TO_CAMERA1
 		);
 
 	    cam2Estimator = new PhotonPoseEstimator(
 		  APRIL_TAG_FIELD_LAYOUT,
-		  ROBOT_TO_NOM
+		  ROBOT_TO_CAMERA2
 		);
 
         
@@ -176,12 +176,12 @@ private final QuestNav questNav;
 	/**
 	 * @return whether PhotonVision camera is connected
 	 */
-	public boolean isSniperConnected() {
-		return sniperConnected;
+	public boolean isCamera1Connected() {
+		return camera1Connected;
 	}
 
-    public boolean isNomConnected() {
-        return nomConnected;
+    public boolean isCamera2Connected() {
+        return camera2Connected;
     }
 
 	/**
@@ -282,7 +282,7 @@ private final QuestNav questNav;
 				avgDist +=
 				  tagPose
 					.get()
-					.toPose2d()
+					.toPose2d()	 
 					.getTranslation()
 					.getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
 			}
@@ -396,28 +396,28 @@ private final QuestNav questNav;
 
 	public void pvPeriodic() {
 		// Update everything but poses first
-		sniperConnected = cam1.isConnected();
-        nomConnected = cam2.isConnected();
+		camera1Connected = cam1.isConnected();
+        camera2Connected = cam2.isConnected();
 
 		// Grab all unread results from camera
-		List<PhotonPipelineResult> pvCamResults = cam1.getAllUnreadResults();
-        List<PhotonPipelineResult> nomResults = cam2.getAllUnreadResults();
+		List<PhotonPipelineResult> cam1Results = cam1.getAllUnreadResults();
+        List<PhotonPipelineResult> cam2Results = cam2.getAllUnreadResults();
 
 		// Process logging & variables if unread results found
-		if (!pvCamResults.isEmpty()) {
-			PhotonPipelineResult pvCamResult = pvCamResults.get(pvCamResults.size() - 1);
+		if (!cam1Results.isEmpty()) {
+			PhotonPipelineResult camera1Result = cam1Results.get(cam1Results.size() - 1);
 
-			pvHasTarget = pvCamResult.hasTargets();
+			pvHasTarget = camera1Result.hasTargets(); 
 
 			if (pvHasTarget) {
-				pvBestTargetId = pvCamResult.getBestTarget().getFiducialId();
+				pvBestTargetId = camera1Result.getBestTarget().getFiducialId();
 			} else {
 				pvBestTargetId = -1;
 			}
 		}
 
 		Optional<EstimatedRobotPose> visionEst = Optional.empty();
-		for (var change : pvCamResults) {
+		for (var change : cam1Results) {
 			// Attempt multi-tag estimation
 			visionEst = cam1Estimator.estimateCoprocMultiTagPose(change);
 

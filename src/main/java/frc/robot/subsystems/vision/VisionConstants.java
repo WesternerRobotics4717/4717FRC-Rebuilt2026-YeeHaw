@@ -25,22 +25,22 @@ public class VisionConstants {
 		public static final int PHOTONVISION_MEASUREMENT_SWITCH = 14;
     }
     public static final class pvConstants{
-        public static final String PV_CAM_ONE = "ShooterCamera";
-        public static final String PV_CAM_TWO = "IntakeCamera";
+        public static final String PV_CAM_ONE = "Camera1";
+        public static final String PV_CAM_TWO = "Camera2";
         public static final Transform2d SHOOTER_OFFSET = new Transform2d(-Units.inchesToMeters(10), 0, Rotation2d.kZero);
 
 		public static final Transform3d ROBOT_TO_QUEST = new Transform3d(
-		  -0.26545065,
-		  0.18207046,
-		  0,
+	  	  Units.inchesToMeters(9.25),
+		  -Units.inchesToMeters(8.5),
+		  Units.inchesToMeters(8.5),
 		  new Rotation3d(
 			0,
 			0,
-			Math.PI / 2
+			Units.degreesToRadians(270)
 		  )
 		);
 
-		public static final Transform3d ROBOT_TO_SNIPER = new Transform3d(
+		public static final Transform3d ROBOT_TO_CAMERA1 = new Transform3d(
 		  -Units.inchesToMeters(5),
 		  -Units.inchesToMeters(1.375),
 		  Units.inchesToMeters(19),
@@ -51,14 +51,14 @@ public class VisionConstants {
 		  )
 		);
 
-        public static final Transform3d ROBOT_TO_NOM = new Transform3d(
-		  -Units.inchesToMeters(5),
-		  -Units.inchesToMeters(1.375),
-		  Units.inchesToMeters(19),
+        public static final Transform3d ROBOT_TO_CAMERA2 = new Transform3d(
+		  Units.inchesToMeters(9.25),
+		  -Units.inchesToMeters(8.5),
+		  Units.inchesToMeters(8.5),
 		  new Rotation3d(
 			0,
-			Units.degreesToRadians(-56),
-			0
+			0,
+			Units.degreesToRadians(270)
 		  )
 		);
 

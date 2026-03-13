@@ -89,6 +89,10 @@ public class DriveConstants {
   public static final double autonTurnKp = 0.5;
   public static final double autonTurnKd = 0.0;
 
+  // Drive PID Values (full drivebase, not module)
+  public static final double autoAimKp = 0.0;
+  public static final double autoAimKd = 0.0;
+
   public static final RobotConfig ppConfig =
       new RobotConfig(
           robotMassKg,

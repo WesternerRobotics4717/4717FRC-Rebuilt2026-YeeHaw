@@ -1,29 +1,22 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.Shooter;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkClosedLoopController;
-
-import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.ClosedLoopConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.units.Measure;
-import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.DutyCycle;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.subsystems.DeviceIDs.ShooterConstants;
 
 public class Shooter extends SubsystemBase {
@@ -34,12 +27,11 @@ public class Shooter extends SubsystemBase {
     private final SparkFlex shooterRollers = new SparkFlex(ShooterConstants.shooterRollersCanId, SparkFlex.MotorType.kBrushless);
     private final SparkFlex shooterHoodController = new SparkFlex(ShooterConstants.hoodCanId, SparkFlex.MotorType.kBrushless);
     
-    private final DutyCycleEncoder hoodAbsoluteEncoder = new DutyCycleEncoder(ShooterConstants.shooterHoodThroughBore);
 
     // Encoders
 
     private final RelativeEncoder flyWheelEncoder = shooterFlyWheel.getEncoder();
-    private final RelativeEncoder hoodEncoder = shooterHoodController.getEncoder();
+    private final RelativeEncoder hoodEncoder;
     private final RelativeEncoder rollerEncoder = shooterRollers.getEncoder();
 
     // Controllers
@@ -50,19 +42,20 @@ public class Shooter extends SubsystemBase {
 
     
 
+
     // PID
 
-    private double flyWheeltP = 0.0;
-    private double flyWheeltD = 0.0;
+    private double flyWheeltP = 0.2;
+    private double flyWheeltD = 0.001;
     private double flyWheeltV = .001802;
     private double flyWheeltS = .15;
 
-    private double rollertP = 0.0;
-    private double rollertD = 0.0;
+    private double rollertP = 0.2;
+    private double rollertD = 0.001;
     private double rollertV = 0.001822;
     private double rollertS = 0.31;
 
-    private double hoodtP = 0.0;
+    private double hoodtP = 0.012;
     private double hoodtD = 0.0;
 
     // Feedforward
@@ -114,7 +107,11 @@ public class Shooter extends SubsystemBase {
         hoodConfig.idleMode(IdleMode.kBrake);
 
         hoodConfig.closedLoop
+                .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
                 .pid(hoodtP,0, hoodtD);
+
+        hoodConfig.encoder.positionConversionFactor(0.125*360);
+
 
         shooterHoodController.configure(
                 hoodConfig,
@@ -123,6 +120,7 @@ public class Shooter extends SubsystemBase {
                 
         );
 
+        hoodEncoder = shooterHoodController.getEncoder();
         instantiateTunables();
     }
 
@@ -137,8 +135,8 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/Roller/kV", rollertV);
         SmartDashboard.putNumber("Shooter/Roller/kS", rollertS);
 
-        SmartDashboard.getNumber("Shooter/Hood/kP", hoodtP);
-        SmartDashboard.getNumber("Shooter/Hood/kD", hoodtD);
+        SmartDashboard.putNumber("Shooter/Hood/kP", hoodtP);
+        SmartDashboard.putNumber("Shooter/Hood/kD", hoodtD);
 
 
         
@@ -197,6 +195,7 @@ public class Shooter extends SubsystemBase {
         return flyWheelEncoder.getVelocity();
     }
 
+
     // Roller control
 
         public Command setRollerRPM(double rpm) {
@@ -219,12 +218,19 @@ public class Shooter extends SubsystemBase {
 
     // Hood control
 
-    public Command setHoodAngle(double angle) {
-        return this.run(() ->
-        hoodController.setSetpoint(
+    public FunctionalCommand setHoodAngle(double angle) {
+        return new FunctionalCommand(
+            () -> {
+                hoodController.setSetpoint(
                 angle,
-                SparkBase.ControlType.kPosition
-        ));
+                SparkBase.ControlType.kPosition);
+                
+            }, 
+            () -> {}, 
+            (interrupted) -> {
+                shooterHoodController.set(0.0);
+            },
+            () -> false, this);
     }
 
     public double getHoodAngle() {
@@ -276,6 +282,8 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/Flywheel/Output", shooterFlyWheel.getAppliedOutput());
         SmartDashboard.putNumber("Shooter/Roller/RPM", shooterRollers.getEncoder().getVelocity());
         SmartDashboard.putNumber("Shooter/Roller/Output", shooterRollers.getAppliedOutput());
+        SmartDashboard.putNumber("Shooter/Hood/Position", getHoodAngle());
+        SmartDashboard.putNumber("Shooter/Hood/Output", shooterHoodController.getAppliedOutput());
     }
 
 
@@ -356,6 +364,8 @@ public class Shooter extends SubsystemBase {
         {
 
             hoodConfig.idleMode(IdleMode.kBrake);
+                    hoodConfig.encoder.positionConversionFactor(0.125*360);
+
 
             hoodConfig.closedLoop
                     .pid(hoodtP,0, hoodtD);
