@@ -18,7 +18,6 @@ import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
-import frc.robot.subsystems.drive.AutoAim;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.ModuleIO;
@@ -28,13 +27,10 @@ import frc.robot.subsystems.drive.ModuleIOSpark;
 import frc.robot.subsystems.vision.LocalizationSystem;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-
-import frc.robot.subsystems.Climb.Climb;
-import frc.robot.subsystems.Shooter.ShooterConstants;
-import frc.robot.subsystems.Indexer.Indexer;
-import frc.robot.subsystems.Intake.Intake;
-import frc.robot.subsystems.Intake.IntakeConstants;
-import frc.robot.subsystems.Shooter.Shooter;
+import frc.robot.subsystems.Indexer;
+import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.Climb;
 
 
 
@@ -50,14 +46,12 @@ public class RobotContainer {
   private final Intake intake;
   private final Indexer indexer;
   private final Shooter shooter;
+  private final Climb climb;
   //private final LocalizationSystem vision;
-  //private final Climb climb;
 
   // Controller
   public static CommandXboxController controller = new CommandXboxController(0);
 
-
-  
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 
@@ -73,8 +67,6 @@ public class RobotContainer {
                 new ModuleIOSpark(1),
                 new ModuleIOSpark(2),
                 new ModuleIOSpark(3));
-
-            
         break;
 
       case SIM:
@@ -103,8 +95,7 @@ public class RobotContainer {
     intake = new Intake();
     shooter = new Shooter();
     indexer = new Indexer();
-    //vision = new LocalizationSystem();
-    //climb = new Climb();
+    climb = new Climb();
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -127,23 +118,8 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureButtonBindings();
+    //vision.LocalizationSystem();
   }
-
-  //Autonomous Commands 
-
-  public Command intakeFuelCommand() {
-    return intake.setArmPosition(IntakeConstants.intakePosition).alongWith(
-        intake.runIntake(IntakeConstants.intakeVoltage)
-    );
-  }
-
-  public Command scoreFuelCommand() {
-    return shooter.setHoodAngle(ShooterConstants.HubScorePosition)
-        .alongWith(shooter.setFlywheelRPM(6000))
-        .alongWith(shooter.setRollerRPM(3000));
-  }
-
-  
 
   /**
    * Use this method to define your button->command mappings. Buttons can be created by
@@ -160,7 +136,6 @@ public class RobotContainer {
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
 
-    
     // Lock to 0° when A button is held
    /*  controller
         .a()
@@ -188,37 +163,28 @@ public class RobotContainer {
         controller.a().whileTrue(intake.intakeSpin(9)); //Spin in volts
         controller.start().whileTrue(intake.intakeSpin(-5));
 
-        //controller.b().whileTrue(Commands.parallel(indexer.spinIndexer(), shooter.setRPMs(6000, 3000)));
+        controller.b().whileTrue(Commands.parallel(indexer.spinIndexer(), shooter.setRPMs(6000, 3000)));
 
     controller.leftTrigger().onTrue(intake.setArmPosition(15));
     controller.leftBumper().whileTrue(indexer.runIndexer(-9));
 
+    controller.povLeft().whileTrue(climb.climbUp());
+    controller.povRight().whileTrue(climb.climbDrop());
 
     controller.rightBumper().whileTrue(
-        indexer.runIndexer(9).alongWith(intake.setArmPosition(90)).alongWith(intake.runIntake(9))
+        (indexer.runIndexer(9))
     );
 
     controller.rightTrigger().whileTrue(
-        shooter.setRPMs(4000,3000)
+        shooter.setRPMs(6000,3000)
     );
-
-    /*controller.povRight().whileTrue(
-        new AutoAim(controller,drive)
-    ); */
 
     controller.povUp().whileTrue(
-        shooter.setHoodAngle(10)
+        shooter.rawMoveHood(0.1)
     );
     controller.povDown().whileTrue(
-        shooter.setHoodAngle(8)
+        shooter.rawMoveHood(-0.1)
     );
-    controller.a().whileTrue(
-        intake.setArmPosition(0)
-    );
-    controller.b().whileTrue(
-        intake.setArmPosition(90)
-    );
-
 
 
 
@@ -236,7 +202,4 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
-
 }
-
- 

@@ -29,10 +29,10 @@ public class DriveConstants {
       };
 
   // Zeroed rotation values for each module, see setup instructions
-  public static final Rotation2d frontLeftZeroRotation = new Rotation2d(-2.745826);
-  public static final Rotation2d frontRightZeroRotation = new Rotation2d(2.230408);
-  public static final Rotation2d backRightZeroRotation = new Rotation2d(2.653787);
-  public static final Rotation2d backLeftZeroRotation = new Rotation2d(0.493942);
+  public static final Rotation2d frontLeftZeroRotation = new Rotation2d(0);
+  public static final Rotation2d frontRightZeroRotation = new Rotation2d(0);
+  public static final Rotation2d backRightZeroRotation = new Rotation2d(0);
+  public static final Rotation2d backLeftZeroRotation = new Rotation2d(0);
 
 
   // Device CAN IDs
@@ -88,10 +88,6 @@ public class DriveConstants {
   public static final double autonTranslationKd = 0.0;
   public static final double autonTurnKp = 0.5;
   public static final double autonTurnKd = 0.0;
-
-  // Drive PID Values (full drivebase, not module)
-  public static final double autoAimKp = 0.0;
-  public static final double autoAimKd = 0.0;
 
   public static final RobotConfig ppConfig =
       new RobotConfig(

@@ -9,8 +9,7 @@ package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.drive.DriveConstants.*;
-
-
+import static frc.robot.subsystems.vision.VisionConstants.pvConstants.ROBOT_TO_QUEST;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
@@ -23,6 +22,7 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -41,10 +41,13 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.util.LocalADStarAK;
+import gg.questnav.questnav.QuestNav;
+
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
+import frc.robot.subsystems.drive.GyroIO.*;
 
 
 public class Drive extends SubsystemBase {
@@ -55,6 +58,7 @@ public class Drive extends SubsystemBase {
   private final SysIdRoutine sysId;
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
+      private final QuestNav questNav = new QuestNav();
   
 
   private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(moduleTranslations);
@@ -68,9 +72,6 @@ public class Drive extends SubsystemBase {
       };
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
-  
-  static final boolean isCanFD = false;
-  static final double ODOMETRY_FREQUENCY = isCanFD ? 250.0 : 100.0;
 
   public Drive(
       GyroIO gyroIO,
@@ -81,16 +82,14 @@ public class Drive extends SubsystemBase {
     this.gyroIO = gyroIO;
     modules[0] = new Module(flModuleIO, 0, "FrontLeft");
     modules[1] = new Module(frModuleIO, 1, "FrontRight");
-    modules[2] = new Module(blModuleIO, 2, "BackRight");
-    modules[3] = new Module(brModuleIO, 3, "BackLeft");
+    modules[2] = new Module(blModuleIO, 2, "BackLeft");
+    modules[3] = new Module(brModuleIO, 3, "BackRight");
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
     // Start odometry thread
     SparkOdometryThread.getInstance().start();
-    PhoenixOdometryThread.getInstance().start();
-
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
@@ -124,22 +123,23 @@ public class Drive extends SubsystemBase {
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
-
   }
 
   @Override
   public void periodic() {
     
-    //System.out.println("ALSO THE SWERVE THING");
-    odometryLock.lock(); // Prevents odometry updates while reading data
-    gyroIO.updateInputs(gyroInputs);
-    Logger.processInputs("Drive/Gyro", gyroInputs);
+    odometryLock.lock();
+try {
+  gyroIO.updateInputs(gyroInputs);
+  Logger.processInputs("Drive/Gyro", gyroInputs);
+  for (var module : modules) {
+    module.periodic();
+  }
+} finally {
+  odometryLock.unlock();
+}
 
-    for (int i = 0; i < 4; i++) {
-      modules[i].periodic();
-    }
-
-    odometryLock.unlock();
+    
 
     // Stop moving when disabled
     if (DriverStation.isDisabled()) {
@@ -155,45 +155,35 @@ public class Drive extends SubsystemBase {
     }
 
     // Update odometry
-    //System.out.println("odo start update");
-    
     double[] sampleTimestamps =
         modules[0].getOdometryTimestamps(); // All signals are sampled together
-    // System.out.println("stuck -1");
-    int sampleCount = sampleTimestamps.length;
-    // System.out.println("SCount" + sampleCount);
+    int sampleCount = Math.min(modules[0].getOdometryTimestamps().length,gyroInputs.odometryYawPositions.length);
     for (int i = 0; i < sampleCount; i++) {
       // Read wheel positions and deltas from each module
       SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
       SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
-      // System.out.println("stuck 1");
       for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
-        modulePositions[moduleIndex] = modules[moduleIndex].getPosition();
-        // System.out.println("stuck 2");
-        moduleDeltas[moduleIndex] =  
-        new SwerveModulePosition(
+        modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
+        moduleDeltas[moduleIndex] =
+            new SwerveModulePosition(
                 modulePositions[moduleIndex].distanceMeters
                     - lastModulePositions[moduleIndex].distanceMeters,
                 modulePositions[moduleIndex].angle);
-        System.out.println("stuck 3");
-                lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
-        // Apply update
-        //poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
-        poseEstimator.update(rawGyroRotation, modulePositions);
-        System.out.println("DOING THE SWERVE THING");
-    }
+        lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+      }
 
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
-        rawGyroRotation = gyroInputs.odometryYawPositions[0];
+        rawGyroRotation = gyroInputs.odometryYawPositions[i];
       } else {
         // Use the angle delta from the kinematics and module deltas
         Twist2d twist = kinematics.toTwist2d(moduleDeltas);
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
 
-      
+      // Apply update
+      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
     }
 
     // Update gyro alert
@@ -338,4 +328,6 @@ public class Drive extends SubsystemBase {
   public double getMaxAngularSpeedRadPerSec() {
     return maxSpeedMetersPerSec / driveBaseRadius;
   }
+
+
 }

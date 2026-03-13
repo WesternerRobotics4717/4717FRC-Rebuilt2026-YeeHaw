@@ -1,13 +1,8 @@
 package frc.robot.subsystems.drive;
 
 import static frc.robot.subsystems.drive.DriveConstants.*;
-
-import java.util.Queue;
-
 import static frc.robot.subsystems.DeviceIDs.driveIDs;
 
-import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -16,14 +11,13 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Voltage;
 import frc.robot.subsystems.DeviceIDs.driveIDs;
+import frc.robot.subsystems.drive.SparkOdometryThread;
+import java.util.Queue;
+
+
 
 
 
@@ -37,29 +31,22 @@ public class ModuleIOSpark implements ModuleIO {
 
   private final Rotation2d zeroRotation;
 
-  // Inputs from drive motor
-  private final StatusSignal<Angle> drivePosition;
+  private final Queue<Double> timestampQueue;
   private final Queue<Double> drivePositionQueue;
-  private final StatusSignal<AngularVelocity> driveVelocity;
-  private final StatusSignal<Voltage> driveAppliedVolts;
-  private final StatusSignal<Current> driveCurrent;
-
-  private final Queue<Double> sparkTimestampQueue;
-  private final Queue<Double> phoenixTimestampQueue;
-
-    // Connection debouncers
-  private final Debouncer driveConnectedDebounce =
-      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
-
+  private final Queue<Double> turnPositionQueue;
 
   public ModuleIOSpark(int module) {
+
+
+
+
 
     zeroRotation =
         switch (module) {
           case 0 -> frontLeftZeroRotation;
           case 1 -> frontRightZeroRotation;
-          case 2 -> backRightZeroRotation;
-          case 3 -> backLeftZeroRotation;
+          case 2 -> backLeftZeroRotation;
+          case 3 -> backRightZeroRotation;
           default -> Rotation2d.kZero;
         };
 
@@ -68,8 +55,8 @@ public class ModuleIOSpark implements ModuleIO {
             switch (module) {
               case 0 -> driveIDs.frontLeftDriveCanId;
               case 1 -> driveIDs.frontRightDriveCanId;
-              case 2 -> driveIDs.backRightDriveCanId;
-              case 3 -> driveIDs.backLeftDriveCanId;
+              case 2 -> driveIDs.backLeftDriveCanId;
+              case 3 -> driveIDs.backRightDriveCanId;
               default -> 0;
             });
 
@@ -78,8 +65,8 @@ public class ModuleIOSpark implements ModuleIO {
             switch (module) {
               case 0 -> driveIDs.frontLeftTurnCanId;
               case 1 -> driveIDs.frontRightTurnCanId;
-              case 2 -> driveIDs.backRightTurnCanId;
-              case 3 -> driveIDs.backLeftTurnCanId;
+              case 2 -> driveIDs.backLeftTurnCanId;
+              case 3 -> driveIDs.backRightTurnCanId;
               default -> 0;
             },
             MotorType.kBrushless);
@@ -89,8 +76,8 @@ public class ModuleIOSpark implements ModuleIO {
             switch (module) {
               case 0 -> driveIDs.frontLeftCANcoderCanId;
               case 1 -> driveIDs.frontRightCANcoderCanId;
-              case 2 -> driveIDs.backRightCANcoderCanId;
-              case 3 -> driveIDs.backLeftCANcoderCanId;
+              case 2 -> driveIDs.backLeftCANcoderCanId;
+              case 3 -> driveIDs.backRightCANcoderCanId;
               default -> 0;
             });
 
@@ -103,31 +90,29 @@ public class ModuleIOSpark implements ModuleIO {
     config.Slot0.kP = DriveConstants.driveKp;
     config.Slot0.kV = DriveConstants.driveKv;
     driveMotor.getConfigurator().apply(config);
-    sparkTimestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();
-    phoenixTimestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
 
-    // Create drive status signals
-    drivePosition = driveMotor.getPosition();
-    drivePositionQueue = PhoenixOdometryThread.getInstance().registerSignal(drivePosition.clone());
-    driveVelocity = driveMotor.getVelocity();
-    driveAppliedVolts = driveMotor.getMotorVoltage();
-    driveCurrent = driveMotor.getStatorCurrent();
+
+    timestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();
+    
+    drivePositionQueue = SparkOdometryThread.getInstance().registerSignal(
+      () -> Units.rotationsToRadians(driveMotor.getPosition().getValueAsDouble()));
+
+    turnPositionQueue = SparkOdometryThread.getInstance().registerSignal(
+      () -> Units.rotationsToRadians(cancoder.getAbsolutePosition().getValueAsDouble()));
   }
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
 
-    // Refresh all signals
-    var driveStatus =
-        BaseStatusSignal.refreshAll(drivePosition, driveVelocity, driveAppliedVolts, driveCurrent);
+    inputs.drivePositionRad =
+        Units.rotationsToRadians(driveMotor.getPosition().getValueAsDouble());
 
-    // Update drive inputs
-    inputs.driveConnected = driveConnectedDebounce.calculate(driveStatus.isOK());
-    inputs.drivePositionRad = Units.rotationsToRadians(drivePosition.getValueAsDouble());
-    inputs.driveVelocityRadPerSec = Units.rotationsToRadians(driveVelocity.getValueAsDouble());
-    inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
-    inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
-    
+    inputs.driveVelocityRadPerSec =
+        Units.rotationsToRadians(driveMotor.getVelocity().getValueAsDouble());
+
+    inputs.driveAppliedVolts = driveMotor.getMotorVoltage().getValueAsDouble();
+
+    inputs.driveCurrentAmps = driveMotor.getStatorCurrent().getValueAsDouble();
 
     double turnRadians = Units.rotationsToRadians(cancoder.getAbsolutePosition().getValueAsDouble());
 
@@ -140,17 +125,18 @@ public class ModuleIOSpark implements ModuleIO {
 
     inputs.turnCurrentAmps = turnMotor.getOutputCurrent();
 
+    inputs.driveConnected = true;
+    inputs.turnConnected = true;
 
-    double[] sparkTimeStamps = sparkTimestampQueue.stream().mapToDouble((Double value) -> value).toArray();
-    double[] phoenixTimeStamps = phoenixTimestampQueue.stream().mapToDouble((Double value) -> value).toArray();
-    if (phoenixTimeStamps.length < sparkTimeStamps.length) {
-      inputs.odometryTimestamps = sparkTimeStamps;
-    }
-    else {
-      inputs.odometryTimestamps = phoenixTimeStamps;
-    }
-    phoenixTimestampQueue.clear();
+    inputs.odometryTimestamps = timestampQueue.stream().mapToDouble(Double::doubleValue).toArray();
+
+    inputs.odometryDrivePositionsRad = drivePositionQueue.stream().mapToDouble(Double::doubleValue).toArray();
+
+    inputs.odometryTurnPositions = turnPositionQueue.stream().map(value -> new Rotation2d(value).minus(zeroRotation)).toArray(Rotation2d[]::new);
+
+    timestampQueue.clear();
     drivePositionQueue.clear();
+    turnPositionQueue.clear();
   }
 
   @Override

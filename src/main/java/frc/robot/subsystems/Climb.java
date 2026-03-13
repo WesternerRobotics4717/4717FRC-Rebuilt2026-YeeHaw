@@ -1,4 +1,4 @@
-package frc.robot.subsystems.Climb;
+package frc.robot.subsystems;
 
 
 import com.revrobotics.PersistMode;
