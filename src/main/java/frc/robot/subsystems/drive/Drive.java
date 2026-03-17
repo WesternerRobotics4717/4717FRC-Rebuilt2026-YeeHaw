@@ -356,4 +356,14 @@ public class Drive extends SubsystemBase {
       new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
     };
   }
+
+  public void resetGyro() {
+    Rotation2d robotRotation =
+        DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get().equals(Alliance.Red)
+            ? Rotation2d.fromDegrees(180.0)
+            : Rotation2d.fromDegrees(0.0);
+    gyroIO.resetGyro(robotRotation);
+    setPose(new Pose2d((new Translation2d()), robotRotation));
+  }
 }
