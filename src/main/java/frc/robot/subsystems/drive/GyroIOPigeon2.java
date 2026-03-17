@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
@@ -6,8 +6,6 @@
 // at the root directory of this project.
 
 package frc.robot.subsystems.drive;
-
-import static frc.robot.subsystems.drive.DriveConstants.*;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
@@ -18,28 +16,31 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import frc.robot.generated.TunerConstants;
 import java.util.Queue;
-import frc.robot.subsystems.DeviceIDs;
 
 /** IO implementation for Pigeon 2. */
 public class GyroIOPigeon2 implements GyroIO {
-  private final Pigeon2 pigeon = new Pigeon2(DeviceIDs.pigeonCanId);
+  private final Pigeon2 pigeon =
+      new Pigeon2(TunerConstants.DrivetrainConstants.Pigeon2Id, TunerConstants.kCANBus);
   private final StatusSignal<Angle> yaw = pigeon.getYaw();
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;
   private final StatusSignal<AngularVelocity> yawVelocity = pigeon.getAngularVelocityZWorld();
 
   public GyroIOPigeon2() {
-    pigeon.getConfigurator().apply(new Pigeon2Configuration());
+    if (TunerConstants.DrivetrainConstants.Pigeon2Configs != null) {
+      pigeon.getConfigurator().apply(TunerConstants.DrivetrainConstants.Pigeon2Configs);
+    } else {
+      pigeon.getConfigurator().apply(new Pigeon2Configuration());
+    }
+
     pigeon.getConfigurator().setYaw(0.0);
-    yaw.setUpdateFrequency(odometryFrequency);
+    yaw.setUpdateFrequency(Drive.ODOMETRY_FREQUENCY);
     yawVelocity.setUpdateFrequency(50.0);
     pigeon.optimizeBusUtilization();
-    yawTimestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();
-    var yawClone = yaw.clone(); // Status signals are not thread-safe
-    yawPositionQueue =
-        SparkOdometryThread.getInstance()
-            .registerSignal(() -> yawClone.refresh().getValueAsDouble());
+    yawTimestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
+    yawPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(yaw.clone());
   }
 
   @Override
@@ -56,9 +57,5 @@ public class GyroIOPigeon2 implements GyroIO {
             .toArray(Rotation2d[]::new);
     yawTimestampQueue.clear();
     yawPositionQueue.clear();
-  }
-
-  public void resetGyro(Rotation2d rotation){
-    pigeon.setYaw(rotation.getDegrees()); 
   }
 }

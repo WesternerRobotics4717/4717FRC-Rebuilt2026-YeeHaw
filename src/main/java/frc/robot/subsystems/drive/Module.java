@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
@@ -7,46 +7,38 @@
 
 package frc.robot.subsystems.drive;
 
-import static frc.robot.subsystems.drive.DriveConstants.*;
-
-
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import org.littletonrobotics.junction.Logger;
-import frc.robot.util.LoggedTunableNumber;
 
 public class Module {
   private final ModuleIO io;
   private final ModuleIOInputsAutoLogged inputs = new ModuleIOInputsAutoLogged();
   private final int index;
-  private final String moduleName;
+  private final SwerveModuleConstants<
+          TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
+      constants;
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
+  private final Alert turnEncoderDisconnectedAlert;
   private SwerveModulePosition[] odometryPositions = new SwerveModulePosition[] {};
 
-  public static final LoggedTunableNumber driveP = new LoggedTunableNumber(
-      "Module/Drive/kP", driveKp);
-  public static final LoggedTunableNumber driveD = new LoggedTunableNumber(
-      "Module/Drive/kD", driveKd);
-  public static final LoggedTunableNumber driveS = new LoggedTunableNumber(
-      "Module/Drive/kS", driveKs);
-  public static final LoggedTunableNumber driveV = new LoggedTunableNumber(
-      "Module/Drive/kV", driveKv);
-
-  public static final LoggedTunableNumber turnP = new LoggedTunableNumber(
-      "Module/AzimuthP", turnKp);
-  public static final LoggedTunableNumber turnD = new LoggedTunableNumber(
-      "Module/AzimuthD", turnKd);
-
-  public Module(ModuleIO io, int index, String moduleName) {
+  public Module(
+      ModuleIO io,
+      int index,
+      SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
+          constants) {
     this.io = io;
     this.index = index;
-    this.moduleName = moduleName;
-
+    this.constants = constants;
     driveDisconnectedAlert =
         new Alert(
             "Disconnected drive motor on module " + Integer.toString(index) + ".",
@@ -54,6 +46,10 @@ public class Module {
     turnDisconnectedAlert =
         new Alert(
             "Disconnected turn motor on module " + Integer.toString(index) + ".", AlertType.kError);
+    turnEncoderDisconnectedAlert =
+        new Alert(
+            "Disconnected turn encoder on module " + Integer.toString(index) + ".",
+            AlertType.kError);
   }
 
   public void periodic() {
@@ -64,7 +60,7 @@ public class Module {
     int sampleCount = inputs.odometryTimestamps.length; // All signals are sampled together
     odometryPositions = new SwerveModulePosition[sampleCount];
     for (int i = 0; i < sampleCount; i++) {
-      double positionMeters = inputs.odometryDrivePositionsRad[i] * wheelRadiusMeters;
+      double positionMeters = inputs.odometryDrivePositionsRad[i] * constants.WheelRadius;
       Rotation2d angle = inputs.odometryTurnPositions[i];
       odometryPositions[i] = new SwerveModulePosition(positionMeters, angle);
     }
@@ -72,18 +68,7 @@ public class Module {
     // Update alerts
     driveDisconnectedAlert.set(!inputs.driveConnected);
     turnDisconnectedAlert.set(!inputs.turnConnected);
-
-    LoggedTunableNumber.ifChanged(
-            hashCode(), () -> {
-                io.setDrivePID(driveP.get(), driveD.get(), driveV.get(), driveS.get());
-            }, driveP, driveD, driveV, driveS);
-            
-    LoggedTunableNumber.ifChanged(
-            hashCode(), () -> {
-                io.setAzimuthPID(turnP.get(), 0.0, turnD.get());
-            }, turnP, turnD);
-    
-    Logger.recordOutput("Drive/Module/" + moduleName + "/turnPID Output", io.getPIDOutput());
+    turnEncoderDisconnectedAlert.set(!inputs.turnEncoderConnected);
   }
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */
@@ -93,7 +78,7 @@ public class Module {
     state.cosineScale(inputs.turnPosition);
 
     // Apply setpoints
-    io.setDriveVelocity(state.speedMetersPerSecond / wheelRadiusMeters);
+    io.setDriveVelocity(state.speedMetersPerSecond / constants.WheelRadius);
     io.setTurnPosition(state.angle);
   }
 
@@ -116,12 +101,12 @@ public class Module {
 
   /** Returns the current drive position of the module in meters. */
   public double getPositionMeters() {
-    return inputs.drivePositionRad * wheelRadiusMeters;
+    return inputs.drivePositionRad * constants.WheelRadius;
   }
 
   /** Returns the current drive velocity of the module in meters per second. */
   public double getVelocityMetersPerSec() {
-    return inputs.driveVelocityRadPerSec * wheelRadiusMeters;
+    return inputs.driveVelocityRadPerSec * constants.WheelRadius;
   }
 
   /** Returns the module position (turn angle and drive position). */
@@ -149,8 +134,8 @@ public class Module {
     return inputs.drivePositionRad;
   }
 
-  /** Returns the module velocity in rad/sec. */
+  /** Returns the module velocity in rotations/sec (Phoenix native units). */
   public double getFFCharacterizationVelocity() {
-    return inputs.driveVelocityRadPerSec;
+    return Units.radiansToRotations(inputs.driveVelocityRadPerSec);
   }
 }

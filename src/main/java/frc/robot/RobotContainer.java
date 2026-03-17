@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
@@ -8,44 +8,23 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathPlannerAuto;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
-import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
+import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
-import frc.robot.subsystems.drive.ModuleIOSpark;
-import frc.robot.subsystems.drive.DriveConstants;
-import frc.robot.subsystems.vision.LocalizationSystem;
-
+import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-
-import frc.robot.subsystems.AutonSubsystem;
-import frc.robot.subsystems.Climb;
-import frc.robot.subsystems.Indexer;
-import frc.robot.subsystems.Intake;
-
-import frc.robot.subsystems.Shooter;
-
-
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -55,36 +34,46 @@ import frc.robot.subsystems.Shooter;
  */
 public class RobotContainer {
   // Subsystems
-  public static Drive drive;
-  private final Intake intake;
-  private final Indexer indexer;
-  private final Shooter shooter;
- // private final AutonSubsystem mAutons;
-  //private final LocalizationSystem vision;
-  //private final Climb climb;
+  private final Drive drive;
 
   // Controller
-  public static CommandXboxController controller = new CommandXboxController(0);
+  private final CommandXboxController controller = new CommandXboxController(0);
 
-
-  
   // Dashboard inputs
-  private final SendableChooser<Command> autoChooser;
+  private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
+        // ModuleIOTalonFX is intended for modules with TalonFX drive, TalonFX turn, and
+        // a CANcoder
         drive =
             new Drive(
                 new GyroIOPigeon2(),
-                new ModuleIOSpark(0),
-                new ModuleIOSpark(1),
-                new ModuleIOSpark(2),
-                new ModuleIOSpark(3));
+                new ModuleIOTalonFX(TunerConstants.FrontLeft),
+                new ModuleIOTalonFX(TunerConstants.FrontRight),
+                new ModuleIOTalonFX(TunerConstants.BackLeft),
+                new ModuleIOTalonFX(TunerConstants.BackRight));
 
-            
+        // The ModuleIOTalonFXS implementation provides an example implementation for
+        // TalonFXS controller connected to a CANdi with a PWM encoder. The
+        // implementations
+        // of ModuleIOTalonFX, ModuleIOTalonFXS, and ModuleIOSpark (from the Spark
+        // swerve
+        // template) can be freely intermixed to support alternative hardware
+        // arrangements.
+        // Please see the AdvantageKit template documentation for more information:
+        // https://docs.advantagekit.org/getting-started/template-projects/talonfx-swerve-template#custom-module-implementations
+        //
+        // drive =
+        // new Drive(
+        // new GyroIOPigeon2(),
+        // new ModuleIOTalonFXS(TunerConstants.FrontLeft),
+        // new ModuleIOTalonFXS(TunerConstants.FrontRight),
+        // new ModuleIOTalonFXS(TunerConstants.BackLeft),
+        // new ModuleIOTalonFXS(TunerConstants.BackRight));
         break;
 
       case SIM:
@@ -92,10 +81,10 @@ public class RobotContainer {
         drive =
             new Drive(
                 new GyroIO() {},
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim());
+                new ModuleIOSim(TunerConstants.FrontLeft),
+                new ModuleIOSim(TunerConstants.FrontRight),
+                new ModuleIOSim(TunerConstants.BackLeft),
+                new ModuleIOSim(TunerConstants.BackRight));
         break;
 
       default:
@@ -110,41 +99,28 @@ public class RobotContainer {
         break;
     }
 
-    intake = new Intake();
-    shooter = new Shooter();
-    indexer = new Indexer();
-    //vision = new LocalizationSystem();
-    //climb = new Climb();
-    
+    // Set up auto routines
+    autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
-    // // Set up auto routines
-    autoChooser = AutoBuilder.buildAutoChooser();
+    // Set up SysId routines
+    autoChooser.addOption(
+        "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
+    autoChooser.addOption(
+        "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
+    autoChooser.addOption(
+        "Drive SysId (Quasistatic Forward)",
+        drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+    autoChooser.addOption(
+        "Drive SysId (Quasistatic Reverse)",
+        drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    autoChooser.addOption(
+        "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
+    autoChooser.addOption(
+        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
-    SmartDashboard.putData("Auto Chooser", autoChooser);
-
-
-    // // Set up SysId routines
-    // autoChooser.addOption(
-    //     "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-    // autoChooser.addOption(
-    //     "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
-    // autoChooser.addOption(
-    //     "Drive SysId (Quasistatic Forward)",
-    //     drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    // autoChooser.addOption(
-    //     "Drive SysId (Quasistatic Reverse)",
-    //     drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    // autoChooser.addOption(
-    //     "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    // autoChooser.addOption(
-    //     "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-
-    //mAutons = new AutonSubsystem(drive, intake, indexer, shooter);
     // Configure the button bindings
     configureButtonBindings();
   }
-
- 
 
   /**
    * Use this method to define your button->command mappings. Buttons can be created by
@@ -161,9 +137,8 @@ public class RobotContainer {
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
 
-    
     // Lock to 0° when A button is held
-   /*  controller
+    controller
         .a()
         .whileTrue(
             DriveCommands.joystickDriveAtAngle(
@@ -184,38 +159,7 @@ public class RobotContainer {
                         drive.setPose(
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
-                .ignoringDisable(true)); */
-
-        controller.a().whileTrue(intake.intakeSpin(9)); //Spin in volts
-        controller.start().whileTrue(intake.intakeSpin(-5));
-    controller.x().whileTrue(Commands.runOnce(() -> {drive.resetGyro();}).ignoringDisable(true));
-
-        //controller.b().whileTrue(Commands.parallel(indexer.spinIndexer(), shooter.setRPMs(6000, 3000)));
-
-    controller.leftBumper().whileTrue(indexer.runIndexer(-9).alongWith(intake.runIntake(-6)));
-
-
-    controller.rightBumper().whileTrue(
-        (intake.runIntake(1))
-    );
-
-    controller.rightTrigger().whileTrue(
-        shooter.setRPMs(3000,2500).alongWith(shooter.hoodPIDMove(20)).alongWith(
-            new WaitCommand(0.15).andThen(indexer.runIndexer(9))
-        ) 
-    );
-
-    //controller.povDown().whileTrue(shooter.setHoodAngle(2));
-
-   // controller.povRight().onTrue(intake.setArmPosition(20));
-   // controller.povLeft().onTrue(intake.setArmPosition(1));
-
-    controller.povUp().whileTrue(intake.manualArmMove(6));
-    controller.povDown().whileTrue(intake.manualArmMove(-9));
-
-    controller.povLeft().whileTrue(shooter.hoodPIDMove(2));
-    controller.povRight().whileTrue(shooter.hoodPIDMove(20));
-
+                .ignoringDisable(true));
   }
 
   /**
@@ -224,7 +168,6 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return autoChooser.getSelected();
+    return autoChooser.get();
   }
-
 }

@@ -1,6 +1,6 @@
 {
   "version": "2025.0",
-  "command": 
+  "command": {
     "type": "sequential",
     "data": {
       "commands": [
