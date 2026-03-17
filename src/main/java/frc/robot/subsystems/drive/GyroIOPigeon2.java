@@ -57,4 +57,8 @@ public class GyroIOPigeon2 implements GyroIO {
     yawTimestampQueue.clear();
     yawPositionQueue.clear();
   }
+
+  public void resetGyro(Rotation2d rotation){
+    pigeon.setYaw(rotation.getDegrees()); 
+  }
 }

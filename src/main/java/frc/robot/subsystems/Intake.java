@@ -48,10 +48,11 @@ public class Intake extends SubsystemBase {
     private static double kMinOutput = -1;
     private static double kMaxOutput = 1;
 
-    private final ArmFeedforward moveFeedForward = new ArmFeedforward(kS, kG, 0);
+    private final ArmFeedforward armFeedForward = new ArmFeedforward(kS, kG, 0);
+    private final PIDController armController = new PIDController(kP, kI, kD);
 
     //Variables CUz  (need to be done, i dont rememb er them)
-    private static final double arm_Position_Conversion_Factor = 20;
+    private static final double arm_Position_Conversion_Factor = 60;
     private static final double arm_Velocity_Conversion_Factor = 4;
     private static final double MAX_Velocity = 120;
     private static final double MAX_Acceleration = 250;
@@ -75,26 +76,26 @@ public class Intake extends SubsystemBase {
         SparkFlexConfig spinConfig = new SparkFlexConfig();
 
         moveConfig.idleMode(SparkBaseConfig.IdleMode.kBrake);
-        moveConfig.smartCurrentLimit(60); // No clue on this guy
+        moveConfig.smartCurrentLimit(40); // No clue on this guy
 
         moveConfig.encoder.positionConversionFactor(arm_Position_Conversion_Factor);
 
-        moveConfig.closedLoop.maxMotion
-                .cruiseVelocity(MAX_Velocity)
-                .maxAcceleration(MAX_Acceleration)
-                .allowedProfileError(MAX_LoopError);
+        // moveConfig.closedLoop.maxMotion
+        //         .cruiseVelocity(MAX_Velocity)
+        //         .maxAcceleration(MAX_Acceleration)
+        //         .allowedProfileError(MAX_LoopError);
 
-        moveConfig.closedLoop
-                .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-                .pid(kP, kI, kD)
-                .outputRange(kMinOutput, kMaxOutput); //Max Fraction of Output
+        // moveConfig.closedLoop
+        //         .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
+        //         .pid(kP, kI, kD)
+        //         .outputRange(kMinOutput, kMaxOutput); //Max Fraction of Output
         
 
 
         armMoveMotor.configure(moveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         spinConfig.idleMode(SparkBaseConfig.IdleMode.kCoast);
-        spinConfig.smartCurrentLimit(60);
+        spinConfig.smartCurrentLimit(40);
         spinConfig.encoder.velocityConversionFactor(arm_Velocity_Conversion_Factor);
         spinConfig.inverted(true);
 
@@ -109,10 +110,8 @@ public class Intake extends SubsystemBase {
         SmartDashboard.putNumber("Intake/Pivot/kI", 0);
         SmartDashboard.putNumber("Intake/Pivot/kD", kP);
         SmartDashboard.putNumber("Intake/Pivot/kG", kG);
-        SmartDashboard.putNumber("Intake/Pivot/Max Velocity", kP);
-        SmartDashboard.putNumber("Intake/Pivot/Max Acceleration", kP);
-        SmartDashboard.putNumber("Intake/Pivot/CurrentPosition", currentDegrees);
-        SmartDashboard.putNumber("Intake/Pivot/Start Offset", startPosition);
+        // SmartDashboard.putNumber("Intake/Pivot/Max Velocity", kP);
+        // SmartDashboard.putNumber("Intake/Pivot/Max Acceleration", kP)
         
     }
     
@@ -120,20 +119,24 @@ public class Intake extends SubsystemBase {
   
 
     public double getArmPositionDegrees() {
-        return relativeMoveEncoder.getPosition();
+        return relativeMoveEncoder.getPosition() * IntakeConstants.conversionFactor;
     }
-
-        double currentDegrees = getArmPositionDegrees();
-        double currentArmRadians = Units.degreesToRadians(currentDegrees);
-        
-        double velocityRadPerSec = Units.degreesToRadians(relativeMoveEncoder.getVelocity());
-
-        double ffVolts = moveFeedForward.calculate(currentArmRadians, velocityRadPerSec);
 
         
     public Command setArmPosition(double targetDegrees) {
-        return this.run(() -> 
-        armMovePID.setSetpoint(targetDegrees, SparkBase.ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, ffVolts));
+        return new FunctionalCommand(() -> armController.setSetpoint(targetDegrees)
+        , () -> {
+            double PIDoutput = armController.calculate(getArmPositionDegrees());
+            double kGoutput = armFeedForward.calculate(Units.degreesToRadians(getArmPositionDegrees()), 0.0);
+            armMoveMotor.set(PIDoutput);
+        }, (interrupted) -> {
+            armMoveMotor.set(0.0);
+        }, () -> false, this);
+        // armMovePID.setSetpoint(targetDegrees, SparkBase.ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, ffVolts));
+    }
+
+    public Command manualArmMove(double voltage) {
+        return this.runEnd(() -> armMoveMotor.setVoltage(voltage), () -> {armMoveMotor.setVoltage(0);});
     }
 
     public Command intakeArmStop() {
@@ -148,17 +151,20 @@ public class Intake extends SubsystemBase {
     public FunctionalCommand runIntake(double voltage) {
         return new FunctionalCommand(
             () -> {
-                spinIntakeMotor.setVoltage(voltage);
+                spinIntakeMotor.set(voltage);
             }, () -> {}, 
             (interrupted) -> {
-                spinIntakeMotor.setVoltage(0);
+                spinIntakeMotor.set(0);
             }, 
-            () -> false, this);
+            () -> false);
     }
 
 
     @Override
     public void periodic() {
+        SmartDashboard.putNumber("Intake/Pivot/Current Position ", getArmPositionDegrees());
+        SmartDashboard.putNumber("Intake/Pivot/Raw Position", relativeMoveEncoder.getPosition());
+        SmartDashboard.putNumber("Intake/Pivot/Motor Output", armMoveMotor.getAppliedOutput());
         updateValues();
     }
 
@@ -170,40 +176,34 @@ public class Intake extends SubsystemBase {
         double currentMaxAccel = tunableMaxAccel;
         double currentMaxVelocity = tunableMaxVelocity;
         double currentStartPosition = startPosition;
-        double currentPosition = currentDegrees;
 
         tunablekP = SmartDashboard.getNumber("Intake/Pivot/kP", tunablekP);
         tunablekI = SmartDashboard.getNumber("Intake/Pivot/kI", tunablekI);
         tunablekD = SmartDashboard.getNumber("Intake/Pivot/kD", tunablekD);
         tunablekG = SmartDashboard.getNumber("Intake/Pivot/kG", tunablekG);
         tunableMaxAccel = SmartDashboard.getNumber("Intake/Pivot/Max Accel", MAX_Acceleration);
-        tunableMaxVelocity = SmartDashboard.getNumber("Intake/Pivot/Max Velocity", MAX_Velocity);
-        startPosition = SmartDashboard.getNumber("Intake/Pivot/Start Offset", startPosition);
-        currentDegrees = SmartDashboard.getNumber("Intake/Pivot/CurrentPosition", currentDegrees);
-        
-
-        
-        SparkFlexConfig moveConfig = new SparkFlexConfig();
+        tunableMaxVelocity = SmartDashboard.getNumber("Intake/Pivot/Max Velocity", MAX_Velocity);        
 
         if (currentkP != tunablekP || currentkD != tunablekD ||
             currentkI != tunablekI || currentkG != tunablekG || 
-            currentMaxAccel != tunableMaxAccel || currentMaxVelocity != tunableMaxVelocity || currentStartPosition != startPosition || currentPosition != currentDegrees) {
+            currentMaxAccel != tunableMaxAccel || currentMaxVelocity != tunableMaxVelocity || currentStartPosition != startPosition) {
                 System.out.println("UPDATING VALUES");
-                moveConfig.idleMode(SparkBaseConfig.IdleMode.kBrake);
-                moveConfig.smartCurrentLimit(60); // No clue on this guy
-                moveConfig.closedLoop.maxMotion
-                        .cruiseVelocity(MAX_Velocity)
-                        .maxAcceleration(MAX_Acceleration)
-                        .allowedProfileError(MAX_LoopError);
-                moveConfig.closedLoop
-                        .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-                        .pid(tunablekP, tunablekI, tunablekD)
-                        .outputRange(kMinOutput, kMaxOutput); //Max Fraction of Output
+                armController.setPID(currentkP, 0.0, currentkD);
+                armFeedForward.setKg(currentkG);
+
+                // moveConfig.idleMode(SparkBaseConfig.IdleMode.kBrake);
+                // moveConfig.smartCurrentLimit(60); // No clue on this guy
+                // moveConfig.closedLoop.maxMotion
+                //         .cruiseVelocity(MAX_Velocity)
+                //         .maxAcceleration(MAX_Acceleration)
+                //         .allowedProfileError(MAX_LoopError);
+                // moveConfig.closedLoop
+                //         .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
+                //         .pid(tunablekP, tunablekI, tunablekD)
+                //         .outputRange(kMinOutput, kMaxOutput); //Max Fraction of Output
                 
-                armMoveMotor.configure(moveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+                // armMoveMotor.configure(moveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
                 
-                currentStartPosition = startPosition;
-                currentPosition = currentDegrees;
             }
         
     }

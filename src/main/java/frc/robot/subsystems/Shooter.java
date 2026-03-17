@@ -13,6 +13,7 @@ import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.ClosedLoopConfig;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.measure.Voltage;
@@ -34,8 +35,7 @@ public class Shooter extends SubsystemBase {
     private final SparkFlex shooterRollers = new SparkFlex(ShooterConstants.shooterRollersCanId, SparkFlex.MotorType.kBrushless);
     private final SparkFlex shooterHoodController = new SparkFlex(ShooterConstants.hoodCanId, SparkFlex.MotorType.kBrushless);
     
-    private final DutyCycleEncoder hoodAbsoluteEncoder = new DutyCycleEncoder(ShooterConstants.shooterHoodThroughBore);
-
+    private final PIDController hoodPID;
     // Encoders
 
     private final RelativeEncoder flyWheelEncoder = shooterFlyWheel.getEncoder();
@@ -62,8 +62,10 @@ public class Shooter extends SubsystemBase {
     private double rollertV = 0.001822;
     private double rollertS = 0.31;
 
-    private double hoodtP = 0.0;
+    private double hoodtP = 0.007;
     private double hoodtD = 0.0;
+    private double hoodtG = 0.01;
+    private double hoodFF = 0.0;
 
     // Feedforward
 
@@ -112,9 +114,7 @@ public class Shooter extends SubsystemBase {
         SparkFlexConfig hoodConfig = new SparkFlexConfig();
 
         hoodConfig.idleMode(IdleMode.kBrake);
-
-        hoodConfig.closedLoop
-                .pid(hoodtP,0, hoodtD);
+        hoodConfig.inverted(false);
 
         shooterHoodController.configure(
                 hoodConfig,
@@ -122,6 +122,8 @@ public class Shooter extends SubsystemBase {
                 PersistMode.kPersistParameters
                 
         );
+
+          hoodPID = new PIDController(hoodtP, 0, hoodtD);
 
         instantiateTunables();
     }
@@ -137,11 +139,10 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/Roller/kV", rollertV);
         SmartDashboard.putNumber("Shooter/Roller/kS", rollertS);
 
-        SmartDashboard.getNumber("Shooter/Hood/kP", hoodtP);
-        SmartDashboard.getNumber("Shooter/Hood/kD", hoodtD);
+        SmartDashboard.putNumber("Shooter/Hood/kP", hoodtP);
+        SmartDashboard.putNumber("Shooter/Hood/kD", hoodtD);
+        SmartDashboard.putNumber("Shooter/Hood/kG", hoodtG);
 
-
-        
     }
     
 
@@ -165,7 +166,7 @@ public class Shooter extends SubsystemBase {
         (interrupted) -> {
             shooterFlyWheel.set(0.0);
         },
-        () -> false, this);
+        () -> false);
     } 
 
     public FunctionalCommand setRPMs(double flywheelRPM, double acceleratorRPM) {
@@ -190,7 +191,7 @@ public class Shooter extends SubsystemBase {
             (interrupted) -> {
                 shooterFlyWheel.set(0.0);
                 shooterRollers.set(0.0);},
-            () -> false, this);
+            () -> false);
     }
 
     public double getFlywheelRPM() {
@@ -228,7 +229,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public double getHoodAngle() {
-        return hoodEncoder.getPosition();
+        return hoodEncoder.getPosition()*DeviceIDs.ShooterConstants.conversionFactor;
     } 
 
     public double getRollerVelocity() {
@@ -265,6 +266,25 @@ public class Shooter extends SubsystemBase {
     }
 
 
+      public FunctionalCommand hoodPIDMove(double setpoint) {
+        return new FunctionalCommand(
+            () -> {
+                SmartDashboard.putNumber("Shooter/Hood/Setpoint", setpoint);
+                hoodPID.setSetpoint(setpoint);
+                double output = hoodPID.calculate(getHoodAngle());
+            }, 
+            () -> {
+                
+                double output = hoodPID.calculate(getHoodAngle());
+                shooterHoodController.set(output + hoodFF);
+                SmartDashboard.putNumber("Shooter/Hood/Output", output);
+            }, 
+            (interrupted) -> {
+                shooterHoodController.set(hoodFF);
+            }, 
+            () -> false);
+    }
+
 
     public void periodic() {
         updateValues();
@@ -276,6 +296,7 @@ public class Shooter extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/Flywheel/Output", shooterFlyWheel.getAppliedOutput());
         SmartDashboard.putNumber("Shooter/Roller/RPM", shooterRollers.getEncoder().getVelocity());
         SmartDashboard.putNumber("Shooter/Roller/Output", shooterRollers.getAppliedOutput());
+        SmartDashboard.putNumber("Shooter/Hood/Current Position", getHoodAngle());
     }
 
 
@@ -292,6 +313,7 @@ public class Shooter extends SubsystemBase {
 
         double currentHoodkP = hoodtP;
         double currentHoodkD = hoodtD;
+        double currentHoodkG = hoodtG;
 
         
         
@@ -310,6 +332,7 @@ public class Shooter extends SubsystemBase {
 
         hoodtP = SmartDashboard.getNumber("Shooter/Hood/kP", hoodtP);
         hoodtD = SmartDashboard.getNumber("Shooter/Hood/kD", hoodtD);
+        hoodtG = SmartDashboard.getNumber("Shooter/Hood/kG", hoodtG);
 
 
 
@@ -352,20 +375,10 @@ public class Shooter extends SubsystemBase {
             shooterRollers.configure(rollerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         }
 
-        if(currentHoodkP != hoodtP || currentHoodkD != hoodtD) 
+        if(currentHoodkP != hoodtP || currentHoodkD != hoodtD || currentHoodkG != hoodtG) 
         {
-
-            hoodConfig.idleMode(IdleMode.kBrake);
-
-            hoodConfig.closedLoop
-                    .pid(hoodtP,0, hoodtD);
-    
-            shooterHoodController.configure(
-                    hoodConfig,
-                    ResetMode.kResetSafeParameters,
-                    PersistMode.kPersistParameters
-                    
-            );
+            hoodPID.setPID(hoodtP, 0.0,hoodtD);
+            hoodFF  = hoodtG;
         }
 
 }

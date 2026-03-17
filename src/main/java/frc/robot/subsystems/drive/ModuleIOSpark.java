@@ -7,7 +7,11 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
@@ -89,7 +93,16 @@ public class ModuleIOSpark implements ModuleIO {
 
     config.Slot0.kP = DriveConstants.driveKp;
     config.Slot0.kV = DriveConstants.driveKv;
+    config.CurrentLimits.withStatorCurrentLimit(driveMotorCurrentLimit);
+    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     driveMotor.getConfigurator().apply(config);
+
+    SparkMaxConfig turnConfig = new SparkMaxConfig();
+
+    turnConfig.smartCurrentLimit(turnMotorCurrentLimit);
+    turnConfig.inverted(true);
+
+    turnMotor.configure(turnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
 
     timestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();

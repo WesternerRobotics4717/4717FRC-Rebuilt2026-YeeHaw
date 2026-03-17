@@ -17,22 +17,22 @@ import edu.wpi.first.math.util.Units;
 public class DriveConstants {
   public static final double maxSpeedMetersPerSec = 4.8;
   public static final double odometryFrequency = 100.0; // Hz
-  public static final double trackWidth = Units.inchesToMeters(26.5);
-  public static final double wheelBase = Units.inchesToMeters(26.5);
+  public static final double trackWidth = Units.inchesToMeters(22);
+  public static final double wheelBase = Units.inchesToMeters(22);
   public static final double driveBaseRadius = Math.hypot(trackWidth / 2.0, wheelBase / 2.0);
   public static final Translation2d[] moduleTranslations =
       new Translation2d[] {
-        new Translation2d(trackWidth / 2.0, wheelBase / 2.0),
+         new Translation2d(trackWidth / 2.0, wheelBase / 2.0),
         new Translation2d(trackWidth / 2.0, -wheelBase / 2.0),
         new Translation2d(-trackWidth / 2.0, wheelBase / 2.0),
         new Translation2d(-trackWidth / 2.0, -wheelBase / 2.0)
       };
 
   // Zeroed rotation values for each module, see setup instructions
-  public static final Rotation2d frontLeftZeroRotation = new Rotation2d(0);
-  public static final Rotation2d frontRightZeroRotation = new Rotation2d(0);
-  public static final Rotation2d backRightZeroRotation = new Rotation2d(0);
-  public static final Rotation2d backLeftZeroRotation = new Rotation2d(0);
+  public static final Rotation2d frontLeftZeroRotation = new Rotation2d(0.381961);
+  public static final Rotation2d frontRightZeroRotation = new Rotation2d(2.218136);
+  public static final Rotation2d backRightZeroRotation = new Rotation2d(-0.49701);
+  public static final Rotation2d backLeftZeroRotation = new Rotation2d(-2.669127);
 
 
   // Device CAN IDs
@@ -43,7 +43,7 @@ public class DriveConstants {
   public static final double wheelRadiusMeters = Units.inchesToMeters(1.5);
   public static final double driveMotorReduction =
       (50.0/14.0) * (16.0/28.0) * (45.0/15.0); // SDS MK4i L3, overall ~6.12:1
-  public static final DCMotor driveGearbox = DCMotor.getNEO(1);
+  public static final DCMotor driveGearbox = DCMotor.getKrakenX60(1);
 
   // Drive encoder configuration
   public static final double driveEncoderPositionFactor =
@@ -63,9 +63,9 @@ public class DriveConstants {
 
   // Turn motor configuration
   public static final boolean turnInverted = true;
-  public static final int turnMotorCurrentLimit = 40;
+  public static final int turnMotorCurrentLimit = 20;
   public static final double turnMotorReduction = 150.0/7.0;
-  public static final DCMotor turnGearbox = DCMotor.getNeo550(1);
+  public static final DCMotor turnGearbox = DCMotor.getNEO(1);
 
   // Turn encoder configuration
   public static final boolean turnEncoderInverted = false;
