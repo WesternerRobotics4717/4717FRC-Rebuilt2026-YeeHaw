@@ -8,14 +8,14 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.DeviceIDs.ShooterConstants;
+import frc.robot.subsystems.drive.DriveConstants;
 
 public class Climb extends SubsystemBase {
 
   // Motors
 
   private final SparkMax climbMotor =
-      new SparkMax(ShooterConstants.climbCanId, MotorType.kBrushless);
+      new SparkMax(DriveConstants.climbCanId, MotorType.kBrushless);
 
   public Climb() {
     SparkMaxConfig climbConfig = new SparkMaxConfig();

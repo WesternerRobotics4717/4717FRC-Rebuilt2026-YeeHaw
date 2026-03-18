@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.IndexTake;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -15,16 +15,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.DeviceIDs.IntakeConstants;
-
+import frc.robot.subsystems.IndexTake.IndexTakeConstants;
 public class Intake extends SubsystemBase {
 
   // Those Who Declare
 
   private final SparkFlex armMoveMotor =
-      new SparkFlex(IntakeConstants.intakeMoveCanId, MotorType.kBrushless);
+      new SparkFlex(IndexTakeConstants.intakeMoveCanId, MotorType.kBrushless);
   private final SparkFlex spinIntakeMotor =
-      new SparkFlex(IntakeConstants.intakeSpinCanId, MotorType.kBrushless);
+      new SparkFlex(IndexTakeConstants.intakeSpinCanId, MotorType.kBrushless);
 
   private final RelativeEncoder relativeMoveEncoder = armMoveMotor.getEncoder();
 
@@ -103,7 +102,7 @@ public class Intake extends SubsystemBase {
   }
 
   public double getArmPositionDegrees() {
-    return relativeMoveEncoder.getPosition() * IntakeConstants.conversionFactor;
+    return relativeMoveEncoder.getPosition() * IndexTakeConstants.conversionFactor;
   }
 
   public Command setArmPosition(double targetDegrees) {

@@ -19,7 +19,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.Shooter.Turret;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
@@ -37,11 +37,11 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   public static Drive drive;
-  public final Shooter shooter;
+  public final Turret shooter;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
-
+//TODO: continue working on autonomous. Add control switches, for solo and duo.
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 
@@ -102,7 +102,7 @@ public class RobotContainer {
         break;
     }
 
-    shooter = new Shooter();
+    shooter = new Turret();
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());

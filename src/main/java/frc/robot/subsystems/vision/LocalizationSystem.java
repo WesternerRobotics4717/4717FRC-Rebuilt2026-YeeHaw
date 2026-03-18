@@ -18,6 +18,8 @@ import gg.questnav.questnav.QuestNav;
  * <p>This uses Questnav as the primary and Photon as the secondary to provide pose estimation and
  * field localization
  */
+
+ //TODO: verify vision working, and remove photon vision?
 public class LocalizationSystem extends SubsystemBase {
   private final QuestNav questNav = new QuestNav();
 

@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.Shooter;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -15,9 +15,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.DeviceIDs.ShooterConstants;
 
-public class Shooter extends SubsystemBase {
+public class Turret extends SubsystemBase {
+  //TODO: Need to seperate shooter into hood and shooter. Change motors as well
 
   // Motors
 
@@ -68,7 +68,7 @@ public class Shooter extends SubsystemBase {
 
   private final SimpleMotorFeedforward rollerFF = new SimpleMotorFeedforward(rollertV, rollertS);
 
-  public Shooter() {
+  public Turret() {
 
     // Flywheel config
 
@@ -188,7 +188,7 @@ public class Shooter extends SubsystemBase {
   }
 
   public double getHoodAngle() {
-    return hoodEncoder.getPosition() * DeviceIDs.ShooterConstants.conversionFactor;
+    return hoodEncoder.getPosition() * ShooterConstants.conversionFactor;
   }
 
   public double getRollerVelocity() {
@@ -229,7 +229,6 @@ public class Shooter extends SubsystemBase {
         () -> {
           SmartDashboard.putNumber("Shooter/Hood/Setpoint", setpoint);
           hoodPID.setSetpoint(setpoint);
-          double output = hoodPID.calculate(getHoodAngle());
         },
         () -> {
           double output = hoodPID.calculate(getHoodAngle());

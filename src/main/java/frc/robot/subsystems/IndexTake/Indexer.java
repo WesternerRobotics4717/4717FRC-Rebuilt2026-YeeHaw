@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.IndexTake;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
@@ -11,16 +11,16 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.DeviceIDs.IntakeConstants;
+import frc.robot.subsystems.IndexTake.IndexTakeConstants;
 
 public class Indexer extends SubsystemBase {
 
   // Motors
 
   private final SparkMax indexBottom =
-      new SparkMax(IntakeConstants.indexerBottomCanId, MotorType.kBrushless);
+      new SparkMax(IndexTakeConstants.indexerBottomCanId, MotorType.kBrushless);
   private final SparkFlex indexTop =
-      new SparkFlex(IntakeConstants.indexerTopCanID, SparkFlex.MotorType.kBrushless);
+      new SparkFlex(IndexTakeConstants.indexerTopCanID, SparkFlex.MotorType.kBrushless);
 
   public Indexer() {
     SparkFlexConfig topConfig = new SparkFlexConfig();
