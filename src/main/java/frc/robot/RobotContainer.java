@@ -41,7 +41,7 @@ public class RobotContainer {
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
-//TODO: continue working on autonomous. Add control switches, for solo and duo.
+  // TODO: continue working on autonomous. Add control switches, for solo and duo.
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 

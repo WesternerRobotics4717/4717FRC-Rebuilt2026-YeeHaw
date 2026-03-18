@@ -14,8 +14,7 @@ public class Climb extends SubsystemBase {
 
   // Motors
 
-  private final SparkMax climbMotor =
-      new SparkMax(DriveConstants.climbCanId, MotorType.kBrushless);
+  private final SparkMax climbMotor = new SparkMax(DriveConstants.climbCanId, MotorType.kBrushless);
 
   public Climb() {
     SparkMaxConfig climbConfig = new SparkMaxConfig();
