@@ -44,6 +44,8 @@ public class RobotContainer {
   // TODO: continue working on autonomous. Add control switches, for solo and duo.
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  //private final LoggedDashboardChooser<Command> driverControls;
+
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -106,6 +108,7 @@ public class RobotContainer {
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+    //driverControls = new LoggedDashboardChooser<>("DriverSelection");
 
     // Set up SysId routines
     autoChooser.addOption(

@@ -1,5 +1,7 @@
 package frc.robot.subsystems.Shooter;
 
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
+
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -9,6 +11,8 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
+
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -19,23 +23,21 @@ public class Turret extends SubsystemBase {
 
   // Motors
 
-  private final SparkFlex shooterFlyWheel =
-      new SparkFlex(ShooterConstants.flyWheelCanId, SparkFlex.MotorType.kBrushless);
-  private final SparkFlex shooterRollers =
-      new SparkFlex(ShooterConstants.shooterRollersCanId, SparkFlex.MotorType.kBrushless);
+  private final SparkFlex flyWheelMotor = new SparkFlex(ShooterConstants.flyWheelCanId, SparkFlex.MotorType.kBrushless);
+  private final SparkFlex rollerMotor = new SparkFlex(ShooterConstants.rollerCanId, SparkFlex.MotorType.kBrushless);
  
   // Encoders
 
-  private final RelativeEncoder flyWheelEncoder = shooterFlyWheel.getEncoder();
-  private final RelativeEncoder rollerEncoder = shooterRollers.getEncoder();
+  private final RelativeEncoder flyWheelEncoder = flyWheelMotor.getEncoder();
+  private final RelativeEncoder rollerEncoder = rollerMotor.getEncoder();
 
   // Controllers
 
   private final SparkClosedLoopController flyWheelController =
-      shooterFlyWheel.getClosedLoopController();
+      flyWheelMotor.getClosedLoopController();
  
   private final SparkClosedLoopController rollerController =
-      shooterRollers.getClosedLoopController();
+      rollerMotor.getClosedLoopController();
 
   // PID
 
@@ -48,6 +50,13 @@ public class Turret extends SubsystemBase {
   private double rollertD = 0.0;
   private double rollertV = 0.001822;
   private double rollertS = 0.31;
+
+  //Tuneable Setpoints
+  final LoggedNetworkNumber flywheelSetpoint =
+    new LoggedNetworkNumber("Shooter/Flywheel/SetpointRPM", 0.0);
+
+ final LoggedNetworkNumber rollerSetpoint =
+    new LoggedNetworkNumber("Shooter/Roller/SetpointRPM", 0.0);
 
 
   // Feedforward
@@ -69,7 +78,7 @@ public class Turret extends SubsystemBase {
     flywheelConfig.inverted(true);
 
     flywheelConfig.closedLoop.pid(flyWheeltP, 0, flyWheeltD);
-    shooterFlyWheel.configure(
+    flyWheelMotor.configure(
         flywheelConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     // Roller config
@@ -81,11 +90,10 @@ public class Turret extends SubsystemBase {
 
     rollerConfig.closedLoop.pid(rollertP, 0, rollertD);
 
-    shooterRollers.configure(
+    rollerMotor.configure(
         rollerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-    // Hood config
-
+ 
    
 
     instantiateTunables();
@@ -101,7 +109,6 @@ public class Turret extends SubsystemBase {
     SmartDashboard.putNumber("Shooter/Roller/kD", rollertD);
     SmartDashboard.putNumber("Shooter/Roller/kV", rollertV);
     SmartDashboard.putNumber("Shooter/Roller/kS", rollertS);
-
    
   }
 
@@ -117,26 +124,29 @@ public class Turret extends SubsystemBase {
         },
         () -> {},
         (interrupted) -> {
-          shooterFlyWheel.set(0.0);
+          flyWheelMotor.set(0.0);
         },
         () -> false);
   }
 
-  public FunctionalCommand setRPMs(double flywheelRPM, double acceleratorRPM) {
-    double flywheelVolts = flywheelFF.calculate(flywheelRPM / 60);
-    double rollerVolts = rollerFF.calculate(acceleratorRPM / 60.0);
-
+  public FunctionalCommand setRPMs() {
     return new FunctionalCommand(
         () -> {
-          flyWheelController.setSetpoint(
+                  double flywheelRPM = flywheelSetpoint.get();
+                  double rollerRPM = rollerSetpoint.get();
+
+               double flywheelVolts = flywheelFF.calculate(flywheelRPM / 60);
+                double rollerVolts = rollerFF.calculate(rollerRPM / 60.0);
+
+                    flyWheelController.setSetpoint(
               flywheelRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0, flywheelVolts);
           rollerController.setSetpoint(
-              acceleratorRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0, rollerVolts);
+              rollerRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0, rollerVolts);
         },
         () -> {},
         (interrupted) -> {
-          shooterFlyWheel.set(0.0);
-          shooterRollers.set(0.0);
+          flyWheelMotor.set(0.0);
+          rollerMotor.set(0.0);
         },
         () -> false);
   }
@@ -182,12 +192,12 @@ public class Turret extends SubsystemBase {
   public Command rawSpinShooter() {
     return this.runEnd(
         () -> {
-          shooterFlyWheel.set(-.5);
-          shooterRollers.set(.5);
+          flyWheelMotor.set(-.5);
+          rollerMotor.set(.5);
         },
         () -> {
-          shooterFlyWheel.set(0);
-          shooterRollers.set(0);
+          flyWheelMotor.set(0);
+          rollerMotor.set(0);
         });
   }
 
@@ -197,13 +207,14 @@ public class Turret extends SubsystemBase {
   public void periodic() {
     updateValues();
     updateOdometry();
+
   }
 
   public void updateOdometry() {
-    SmartDashboard.putNumber("Shooter/Flywheel/RPM", shooterFlyWheel.getEncoder().getVelocity());
-    SmartDashboard.putNumber("Shooter/Flywheel/Output", shooterFlyWheel.getAppliedOutput());
-    SmartDashboard.putNumber("Shooter/Roller/RPM", shooterRollers.getEncoder().getVelocity());
-    SmartDashboard.putNumber("Shooter/Roller/Output", shooterRollers.getAppliedOutput());
+    SmartDashboard.putNumber("Shooter/Flywheel/RPM", flyWheelMotor.getEncoder().getVelocity());
+    SmartDashboard.putNumber("Shooter/Flywheel/Output", flyWheelMotor.getAppliedOutput());
+    SmartDashboard.putNumber("Shooter/Roller/RPM", rollerMotor.getEncoder().getVelocity());
+    SmartDashboard.putNumber("Shooter/Roller/Output", rollerMotor.getAppliedOutput());
   }
 
   public void updateValues() {
@@ -244,9 +255,9 @@ public class Turret extends SubsystemBase {
 
       flywheelConfig.closedLoop.pid(flyWheeltP, 0, flyWheeltD);
 
-      shooterFlyWheel.configure(
+      flyWheelMotor.configure(
           flywheelConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-      shooterFlyWheel.configure(
+      flyWheelMotor.configure(
           flywheelConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
@@ -259,9 +270,9 @@ public class Turret extends SubsystemBase {
 
       rollerConfig.closedLoop.pid(rollertP, 0, rollertD);
 
-      shooterRollers.configure(
+      rollerMotor.configure(
           rollerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-      shooterRollers.configure(
+      rollerMotor.configure(
           rollerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 

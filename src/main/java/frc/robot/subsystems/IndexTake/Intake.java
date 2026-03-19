@@ -1,5 +1,6 @@
 package frc.robot.subsystems.IndexTake;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -11,6 +12,7 @@ import com.revrobotics.spark.config.SparkFlexConfig;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
@@ -20,14 +22,16 @@ public class Intake extends SubsystemBase {
 
   // Those Who Declare
 
-  private final SparkFlex armMoveMotor =
-      new SparkFlex(IndexTakeConstants.intakeMoveCanId, MotorType.kBrushless);
-  private final SparkFlex spinIntakeMotor =
-      new SparkFlex(IndexTakeConstants.intakeSpinCanId, MotorType.kBrushless);
+  //TODO:Change to Krakenx44 system
 
-  private final RelativeEncoder relativeMoveEncoder = armMoveMotor.getEncoder();
+  private final TalonFX armMoveMotor =
+      new TalonFX(IndexTakeConstants.intakeMoveCanId);
+  private final TalonFX spinIntakeMotor =
+      new TalonFX(IndexTakeConstants.intakeSpinCanId);
 
-  private final SparkClosedLoopController armMovePID = armMoveMotor.getClosedLoopController();
+ // private final RelativeEncoder relativeMoveEncoder = armMoveMotor.getEncoder();
+
+ // private final SparkClosedLoopController armMovePID = armMoveMotor.getClosedLoopController();
 
   // Constants (untuned)
   private static double kP = 0;
@@ -59,7 +63,7 @@ public class Intake extends SubsystemBase {
   private double tunableMaxVelocity = 0.0;
 
   public Intake() {
-    SparkFlexConfig moveConfig = new SparkFlexConfig();
+    /*SparkFlexConfig moveConfig = new SparkFlexConfig();
     SparkFlexConfig spinConfig = new SparkFlexConfig();
 
     moveConfig.idleMode(SparkBaseConfig.IdleMode.kBrake);
@@ -88,7 +92,7 @@ public class Intake extends SubsystemBase {
     spinIntakeMotor.configure(
         spinConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-    instantiateTunables();
+    instantiateTunables(); */
   }
 
   private void instantiateTunables() {
@@ -101,11 +105,11 @@ public class Intake extends SubsystemBase {
 
   }
 
-  public double getArmPositionDegrees() {
+ /*  public double getArmPositionDegrees() {
     return relativeMoveEncoder.getPosition() * IndexTakeConstants.conversionFactor;
-  }
+  } */
 
-  public Command setArmPosition(double targetDegrees) {
+  /*public Command setArmPosition(double targetDegrees) {
     return new FunctionalCommand(
         () -> armController.setSetpoint(targetDegrees),
         () -> {
@@ -122,6 +126,7 @@ public class Intake extends SubsystemBase {
     // armMovePID.setSetpoint(targetDegrees, SparkBase.ControlType.kMAXMotionPositionControl,
     // ClosedLoopSlot.kSlot0, ffVolts));
   }
+    */
 
   public Command manualArmMove(double voltage) {
     return this.runEnd(
@@ -154,9 +159,9 @@ public class Intake extends SubsystemBase {
 
   @Override
   public void periodic() {
-    SmartDashboard.putNumber("Intake/Pivot/Current Position ", getArmPositionDegrees());
-    SmartDashboard.putNumber("Intake/Pivot/Raw Position", relativeMoveEncoder.getPosition());
-    SmartDashboard.putNumber("Intake/Pivot/Motor Output", armMoveMotor.getAppliedOutput());
+  //SmartDashboard.putNumber("Intake/Pivot/Current Position ", getArmPositionDegrees());
+  //SmartDashboard.putNumber("Intake/Pivot/Raw Position", relativeMoveEncoder.getPosition());
+  //SmartDashboard.putNumber("Intake/Pivot/Motor Output", armMoveMotor.getAppliedOutput());
     updateValues();
   }
 

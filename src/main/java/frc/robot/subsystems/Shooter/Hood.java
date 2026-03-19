@@ -1,6 +1,8 @@
 package frc.robot.subsystems.Shooter;
 
+import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
@@ -15,8 +17,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Hood extends SubsystemBase {
 
-     private final SparkFlex shooterHoodController =
-      new SparkFlex(ShooterConstants.hoodCanId, SparkFlex.MotorType.kBrushless);
+     private final SparkFlex shooterHoodController = new SparkFlex(ShooterConstants.hoodCanId, SparkFlex.MotorType.kBrushless);
 
   private final PIDController hoodPID;
 
@@ -47,15 +48,17 @@ public Hood() {
         hoodConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     hoodPID = new PIDController(hoodtP, 0, hoodtD);
+
+    instantiateTuneables();
 }
 
 
-
+public void instantiateTuneables() {
      SmartDashboard.putNumber("Shooter/Hood/kP", hoodtP);
     SmartDashboard.putNumber("Shooter/Hood/kD", hoodtD);
     SmartDashboard.putNumber("Shooter/Hood/kG", hoodtG);
 
-
+}
 
       public Command setHoodAngle(double angle) {
     return this.run(() -> hoodController.setSetpoint(angle, SparkBase.ControlType.kPosition));
@@ -86,13 +89,13 @@ public Hood() {
           shooterHoodController.set(hoodFF);
         },
         () -> false);
+}
 
-
-
+public void periodic() {
 
 }
 
-
+public void periodicTunables() {
     double currentHoodkP = hoodtP;
     double currentHoodkD = hoodtD;
     double currentHoodkG = hoodtG;
@@ -106,6 +109,11 @@ public Hood() {
 
       if (currentHoodkP != hoodtP || currentHoodkD != hoodtD || currentHoodkG != hoodtG) {
       hoodPID.setPID(hoodtP, 0.0, hoodtD);
+      
       hoodFF = hoodtG;
 
+    shooterHoodController.configure(hoodConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+}
+}
 }
