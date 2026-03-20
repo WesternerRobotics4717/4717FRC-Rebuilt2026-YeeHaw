@@ -19,6 +19,9 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.IndexTake.Indexer;
+import frc.robot.subsystems.IndexTake.Intake;
+import frc.robot.subsystems.Shooter.Hood;
 import frc.robot.subsystems.Shooter.Turret;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
@@ -38,14 +41,19 @@ public class RobotContainer {
   // Subsystems
   public static Drive drive;
   public final Turret shooter;
+  public final Intake intake;
+  public final Indexer indexer;
+  public final Hood hood;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
   // TODO: continue working on autonomous. Add control switches, for solo and duo.
+  // TODO: ShotMap Physics interpolation, and change so no intake constant reconfig
+  // TODO: Figure out why Advantage kit isnt logging, and why there is old pathplanner errors
+  // TODO: Shooter launching way too high, should be able to go lower
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
-  //private final LoggedDashboardChooser<Command> driverControls;
-
+  // private final LoggedDashboardChooser<Command> driverControls;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -105,10 +113,13 @@ public class RobotContainer {
     }
 
     shooter = new Turret();
+    intake = new Intake();
+    indexer = new Indexer();
+    hood = new Hood();
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-    //driverControls = new LoggedDashboardChooser<>("DriverSelection");
+    // driverControls = new LoggedDashboardChooser<>("DriverSelection");
 
     // Set up SysId routines
     autoChooser.addOption(
@@ -148,17 +159,17 @@ public class RobotContainer {
             () -> -controller.getRightX()));
 
     // Lock to 0° when A button is held
-    controller
-        .a()
-        .whileTrue(
-            DriveCommands.joystickDriveAtAngle(
-                drive,
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> Rotation2d.kZero));
+    /*controller
+    .a()
+    .whileTrue(
+        DriveCommands.joystickDriveAtAngle(
+            drive,
+            () -> -controller.getLeftY(),
+            () -> -controller.getLeftX(),
+            () -> Rotation2d.kZero)); */
 
     // Switch to X pattern when X button is pressed
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    // controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     // Reset gyro to 0° when B button is pressed
     controller
@@ -170,6 +181,14 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
+
+    controller.a().whileTrue(intake.runIntake(6));
+
+    controller.povUp().whileTrue(intake.rawMoveIntake(5));
+    controller.povDown().whileTrue(intake.rawMoveIntake(-5));
+
+    controller.povLeft().whileTrue(hood.hoodPIDMove(14));
+    controller.rightBumper().whileTrue(Commands.parallel(shooter.setRPMs(), indexer.spinIndexer()));
   }
 
   /**

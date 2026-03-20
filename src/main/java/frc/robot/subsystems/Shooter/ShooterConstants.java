@@ -7,3 +7,12 @@ public class ShooterConstants {
   public static final int shooterHoodThroughBore = 1;
   public static final double conversionFactor = (1 / 8.0) * 360.0;
 }
+
+// Shotmap stuff
+/*
+ * Value 1 = Hood - 22, Flywheel - 5000, Roller - 2500, Distance - 207 center to center
+ * Value 2 = Hood - 14, Flywheel - 2850, Roller - 2000, Distance - 126 center to center
+ *
+ *
+ *
+ */
