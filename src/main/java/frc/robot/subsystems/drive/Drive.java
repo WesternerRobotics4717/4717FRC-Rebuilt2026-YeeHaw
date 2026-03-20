@@ -19,13 +19,16 @@ import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.Kinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -97,6 +100,8 @@ public class Drive extends SubsystemBase {
       };
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
+  private Pose2d odometryOnlyPose = new Pose2d();
+  private final PIDController thetaController = new PIDController(15, 0, 0); //Shitty, but im lazy af
 
   public Drive(
       GyroIO gyroIO,
@@ -109,6 +114,7 @@ public class Drive extends SubsystemBase {
     modules[1] = new Module(frModuleIO, 1, TunerConstants.FrontRight);
     modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
     modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
+    thetaController.enableContinuousInput(-Math.PI, Math.PI);
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
@@ -189,6 +195,7 @@ public class Drive extends SubsystemBase {
                 modulePositions[moduleIndex].angle);
         lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
       }
+        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
 
       // Update gyro angle
       if (gyroInputs.connected) {
@@ -196,9 +203,12 @@ public class Drive extends SubsystemBase {
         rawGyroRotation = gyroInputs.odometryYawPositions[i];
       } else {
         // Use the angle delta from the kinematics and module deltas
-        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
+
+      odometryOnlyPose = odometryOnlyPose.exp(twist);
+
+      Logger.recordOutput("Odometry/RobotBlind", odometryOnlyPose);
 
       // Apply update
       poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
@@ -231,6 +241,16 @@ public class Drive extends SubsystemBase {
     // Log optimized setpoints (runSetpoint mutates each state)
     Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
   }
+
+  public void rotateTo(Rotation2d targetRotation) {
+  double current = getPose().getRotation().getRadians();
+
+  double output = thetaController.calculate(current, targetRotation.getRadians());
+
+  output = MathUtil.clamp(output, -getMaxAngularSpeedRadPerSec(), getMaxAngularSpeedRadPerSec());
+
+  runVelocity(new ChassisSpeeds(0, 0, output));
+}
 
   /** Runs the drive in a straight line with the specified drive output. */
   public void runCharacterization(double output) {
@@ -313,10 +333,13 @@ public class Drive extends SubsystemBase {
   }
 
   /** Returns the current odometry pose. */
-  @AutoLogOutput(key = "Odometry/Robot")
+  @AutoLogOutput(key = "Odometry/RobotEstimated")
   public Pose2d getPose() {
     return poseEstimator.getEstimatedPosition();
   }
+
+
+
 
   /** Returns the current odometry rotation. */
   public Rotation2d getRotation() {

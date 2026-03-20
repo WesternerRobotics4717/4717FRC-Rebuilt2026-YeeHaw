@@ -48,9 +48,9 @@ public class RobotContainer {
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
   // TODO: continue working on autonomous. Add control switches, for solo and duo.
-  // TODO: ShotMap Physics interpolation, and change so no intake constant reconfig
-  // TODO: Figure out why Advantage kit isnt logging, and why there is old pathplanner errors
-  // TODO: Shooter launching way too high, should be able to go lower
+  // TODO: Figure out why Advantage kit isnt logging, and why there is old pathplanner errors, need to do on robo laptop
+  // TODO: Shooter launching way too high, should be able to go lower, need a way to determine, also make roller RPM a function of flywheel rpm
+  // change hood angle versus change wheel rpm
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   // private final LoggedDashboardChooser<Command> driverControls;
@@ -188,7 +188,7 @@ public class RobotContainer {
     controller.povDown().whileTrue(intake.rawMoveIntake(-5));
 
     controller.povLeft().whileTrue(hood.hoodPIDMove(14));
-    controller.rightBumper().whileTrue(Commands.parallel(shooter.setRPMs(), indexer.spinIndexer()));
+    controller.rightBumper().whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.spinIndexer()));
   }
 
   /**

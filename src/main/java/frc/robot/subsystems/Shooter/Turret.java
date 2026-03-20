@@ -122,11 +122,33 @@ public class Turret extends SubsystemBase {
         () -> false);
   }
 
-  public FunctionalCommand setRPMs() {
+  public FunctionalCommand setRPMsTunable() {
     return new FunctionalCommand(
         () -> {
           double flywheelRPM = flywheelSetpoint.get();
           double rollerRPM = rollerSetpoint.get();
+
+          double flywheelVolts = flywheelFF.calculate(flywheelRPM / 60);
+          double rollerVolts = rollerFF.calculate(rollerRPM / 60.0);
+
+          flyWheelController.setSetpoint(
+              flywheelRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0, flywheelVolts);
+          rollerController.setSetpoint(
+              rollerRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0, rollerVolts);
+        },
+        () -> {},
+        (interrupted) -> {
+          flyWheelMotor.set(0.0);
+          rollerMotor.set(0.0);
+        },
+        () -> false);
+  }
+
+   public FunctionalCommand setRPMs(double targetRPM) {
+    return new FunctionalCommand(
+        () -> {
+          double flywheelRPM = targetRPM;
+          double rollerRPM = (targetRPM * .75);
 
           double flywheelVolts = flywheelFF.calculate(flywheelRPM / 60);
           double rollerVolts = rollerFF.calculate(rollerRPM / 60.0);
