@@ -9,6 +9,7 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
@@ -106,6 +107,16 @@ public class Intake extends SubsystemBase {
         });
   }
 
+  public FunctionalCommand functionalRawMoveIntake(double voltage) {
+    return new FunctionalCommand(
+    () -> {armMotor.setControl(new VoltageOut(voltage));
+    }, 
+    () -> {}, 
+    (interrupted) -> {},
+    () -> false);
+    
+  }
+
   @Override
   public void periodic() {
     updateValues();
@@ -128,4 +139,9 @@ public class Intake extends SubsystemBase {
       armMotor.getConfigurator().apply(armConfig);
     }
   }
+
+public Command moveArmDown() {
+  return this.run(() -> {functionalRawMoveIntake(0);
+  });
+}
 }

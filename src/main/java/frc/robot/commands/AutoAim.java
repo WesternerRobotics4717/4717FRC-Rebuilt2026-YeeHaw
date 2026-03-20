@@ -10,6 +10,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 
+
+//Does NOT shoot while aiming
 public class AutoAim extends Command {
 
     private final Turret turret;
@@ -17,6 +19,7 @@ public class AutoAim extends Command {
     private final Drive drive;
     private final Hood hood;
     private final ShotMap shotMap;
+    private final Indexer indexer;
 
     private final Pose2d targetPose;
 
@@ -25,6 +28,7 @@ public class AutoAim extends Command {
         Intake intake,
         Drive drive,
         Hood hood,
+        Indexer indexer,
         ShotMap shotMap,
         Pose2d targetPose
     ) {
@@ -34,9 +38,14 @@ public class AutoAim extends Command {
         this.hood = hood;
         this.shotMap = shotMap;
         this.targetPose = targetPose;
+        this.indexer = indexer;
 
-        addRequirements(turret, intake, drive);
+        addRequirements(turret, intake, hood, drive);
     }
+
+
+  
+   
 
     @Override
     public void execute() {
@@ -59,7 +68,9 @@ public class AutoAim extends Command {
         // Command systems
         hood.setHoodAngle(targetAngle);
         turret.setRPMs(targetRPM);
+        indexer.spinIndexer();
 
         drive.rotateTo(angleToTarget);
     }
+
 }
