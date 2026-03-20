@@ -1,0 +1,96 @@
+{
+  "HALProvider": {
+    "Other Devices": {
+      "SPARK Flex [43]": {
+        "header": {
+          "open": true
+        }
+      },
+      "SPARK Flex [50]": {
+        "header": {
+          "open": true
+        }
+      },
+      "SPARK Flex [51]": {
+        "header": {
+          "open": true
+        }
+      },
+      "SPARK Flex [52]": {
+        "header": {
+          "open": true
+        }
+      },
+      "SPARK MAX [42]": {
+        "header": {
+          "open": true
+        }
+      },
+      "Talon FX (v6)[40]": {
+        "header": {
+          "open": true
+        }
+      },
+      "Talon FX (v6)[41]": {
+        "header": {
+          "open": true
+        }
+      },
+      "Talon FX (v6)[41]/Rotor Sensor": {
+        "header": {
+          "open": true
+        }
+      }
+    }
+  },
+  "NTProvider": {
+    "types": {
+      "/AdvantageKit/RealOutputs/Alerts": "Alerts",
+      "/AdvantageKit/RealOutputs/PathPlanner": "Alerts",
+      "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/Alerts": "Alerts",
+      "/SmartDashboard/Auto Choices": "String Chooser",
+      "/SmartDashboard/PathPlanner": "Alerts"
+    }
+  },
+  "NetworkTables": {
+    "transitory": {
+      "Shooter": {
+        "Flywheel": {
+          "open": true
+        },
+        "Roller": {
+          "open": true
+        },
+        "open": true
+      },
+      "SmartDashboard": {
+        "Intake": {
+          "Pivot": {
+            "open": true
+          },
+          "open": true
+        },
+        "Shooter": {
+          "Roller": {
+            "open": true
+          },
+          "open": true
+        },
+        "open": true
+      }
+    }
+  },
+  "NetworkTables Info": {
+    "Clients": {
+      "open": true
+    },
+    "Connections": {
+      "open": true
+    },
+    "Server": {
+      "open": true
+    },
+    "visible": true
+  }
+}
