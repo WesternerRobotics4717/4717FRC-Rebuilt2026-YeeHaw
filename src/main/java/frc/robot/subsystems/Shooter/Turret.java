@@ -144,7 +144,7 @@ public class Turret extends SubsystemBase {
         () -> false);
   }
 
-   public FunctionalCommand setRPMs(double targetRPM) {
+  public FunctionalCommand setRPMs(double targetRPM) {
     return new FunctionalCommand(
         () -> {
           double flywheelRPM = targetRPM;

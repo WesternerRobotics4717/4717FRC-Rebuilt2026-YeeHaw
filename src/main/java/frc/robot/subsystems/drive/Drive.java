@@ -28,7 +28,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.Kinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -101,7 +100,8 @@ public class Drive extends SubsystemBase {
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
   private Pose2d odometryOnlyPose = new Pose2d();
-  private final PIDController thetaController = new PIDController(15, 0, 0); //Shitty, but im lazy af
+  private final PIDController thetaController =
+      new PIDController(15, 0, 0); // Shitty, but im lazy af
 
   public Drive(
       GyroIO gyroIO,
@@ -195,7 +195,7 @@ public class Drive extends SubsystemBase {
                 modulePositions[moduleIndex].angle);
         lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
       }
-        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
+      Twist2d twist = kinematics.toTwist2d(moduleDeltas);
 
       // Update gyro angle
       if (gyroInputs.connected) {
@@ -243,14 +243,14 @@ public class Drive extends SubsystemBase {
   }
 
   public void rotateTo(Rotation2d targetRotation) {
-  double current = getPose().getRotation().getRadians();
+    double current = getPose().getRotation().getRadians();
 
-  double output = thetaController.calculate(current, targetRotation.getRadians());
+    double output = thetaController.calculate(current, targetRotation.getRadians());
 
-  output = MathUtil.clamp(output, -getMaxAngularSpeedRadPerSec(), getMaxAngularSpeedRadPerSec());
+    output = MathUtil.clamp(output, -getMaxAngularSpeedRadPerSec(), getMaxAngularSpeedRadPerSec());
 
-  runVelocity(new ChassisSpeeds(0, 0, output));
-}
+    runVelocity(new ChassisSpeeds(0, 0, output));
+  }
 
   /** Runs the drive in a straight line with the specified drive output. */
   public void runCharacterization(double output) {
@@ -337,9 +337,6 @@ public class Drive extends SubsystemBase {
   public Pose2d getPose() {
     return poseEstimator.getEstimatedPosition();
   }
-
-
-
 
   /** Returns the current odometry rotation. */
   public Rotation2d getRotation() {

@@ -8,8 +8,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
@@ -41,6 +41,7 @@ public class Intake extends SubsystemBase {
   private double lastkP = 0.0;
   private double lastkD = 0.0;
   private double lastkG = 0.0;
+  private double intakeSetPoint;
 
   public Intake() {
     armConfig.Feedback.SensorToMechanismRatio = arm_Position_Conversion_Factor;
@@ -62,6 +63,8 @@ public class Intake extends SubsystemBase {
     spinMotor.getConfigurator().apply(spinConfig);
 
     setArmOffset();
+
+    SmartDashboard.putNumber("Intake/Pivot/Setpoint", intakeSetPoint);
   }
 
   public void setArmOffset() {
@@ -73,17 +76,17 @@ public class Intake extends SubsystemBase {
     return armMotor.getPosition().getValueAsDouble();
   }
 
-  public void setArmPosition(double position) {
-    armMotor.setControl(motionMagicRequest.withPosition(position));
+  public Command setTunableArmPosition() {
+    double newArmPosition = SmartDashboard.getNumber("Intake/Pivot/Setpoint", intakeSetPoint);
+    return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(newArmPosition)));
   }
 
   public Command intakeArmStop() {
     return this.runOnce(() -> armMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(0)));
   }
 
-  public Command moveArmToPosition(double position) {
-    return this.run(() -> setArmPosition(position));
-  }
+  // public Command moveArmToPosition() {
+  // return this.run(() -> setArmPosition(newArmPosition));}
 
   public FunctionalCommand runIntake(double voltage) {
     return new FunctionalCommand(
@@ -109,12 +112,12 @@ public class Intake extends SubsystemBase {
 
   public FunctionalCommand functionalRawMoveIntake(double voltage) {
     return new FunctionalCommand(
-    () -> {armMotor.setControl(new VoltageOut(voltage));
-    }, 
-    () -> {}, 
-    (interrupted) -> {},
-    () -> false);
-    
+        () -> {
+          armMotor.setControl(new VoltageOut(voltage));
+        },
+        () -> {},
+        (interrupted) -> {},
+        () -> false);
   }
 
   @Override
@@ -140,8 +143,10 @@ public class Intake extends SubsystemBase {
     }
   }
 
-public Command moveArmDown() {
-  return this.run(() -> {functionalRawMoveIntake(0);
-  });
-}
+  public Command moveArmDown() {
+    return this.run(
+        () -> {
+          functionalRawMoveIntake(0);
+        });
+  }
 }

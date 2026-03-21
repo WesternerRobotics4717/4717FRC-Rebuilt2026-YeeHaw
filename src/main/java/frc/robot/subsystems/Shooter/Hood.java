@@ -3,7 +3,6 @@ package frc.robot.subsystems.Shooter;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -11,6 +10,7 @@ import com.revrobotics.spark.config.SparkFlexConfig;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -28,6 +28,7 @@ public class Hood extends SubsystemBase {
   private double hoodtP = 0.008;
   private double hoodtD = 0.0;
   private double hoodtG = 0.01;
+  private double hoodSetpoint = 0.0;
   private double hoodFF = 0.0;
 
   public Hood() {
@@ -48,10 +49,7 @@ public class Hood extends SubsystemBase {
     SmartDashboard.putNumber("Shooter/Hood/kP", hoodtP);
     SmartDashboard.putNumber("Shooter/Hood/kD", hoodtD);
     SmartDashboard.putNumber("Shooter/Hood/kG", hoodtG);
-  }
-
-  public Command setHoodAngle(double angle) {
-    return this.run(() -> hoodController.setSetpoint(angle, SparkBase.ControlType.kPosition));
+    SmartDashboard.putNumber("Shooter/Hood/Setpoint", hoodSetpoint);
   }
 
   public double getHoodAngle() {
@@ -62,17 +60,25 @@ public class Hood extends SubsystemBase {
     return this.runEnd(() -> hoodMotor.set(speed), () -> hoodMotor.set(speed));
   }
 
-  public FunctionalCommand hoodPIDMove(double setpoint) {
+  public Command setHoodAngle(double angle) {
+    return this.runOnce(() -> hoodEncoder.setPosition(angle));
+  }
+
+  public FunctionalCommand hoodPIDMove() {
     return new FunctionalCommand(
         () -> {},
         () -> {
-          hoodPID.setSetpoint(setpoint);
+          double newSetpoint = SmartDashboard.getNumber("Shooter/Hood/Setpoint", hoodSetpoint);
+          hoodPID.setSetpoint(newSetpoint);
           double output = hoodPID.calculate(getHoodAngle());
           hoodMotor.set(output + hoodFF);
           SmartDashboard.putNumber("Shooter/Hood/Output", output);
         },
         (interrupted) -> {
-          hoodMotor.set(hoodFF);
+          hoodPID.setSetpoint(0);
+          double output = hoodPID.calculate(getHoodAngle());
+          hoodMotor.set(output);
+          Commands.waitSeconds(.5).andThen(setHoodAngle(0));
         },
         () -> false);
   }

@@ -7,7 +7,7 @@ public class ShotMap {
   private final InterpolatingDoubleTreeMap rpmMap = new InterpolatingDoubleTreeMap();
 
   public ShotMap() {
-    //Distance is in Meters, Angle is in degrees, RPM is in RPM, duh
+    // Distance is in Meters, Angle is in degrees, RPM is in RPM, duh
     // First number is distance, second number is either angle or rpm
     angleMap.put(5.26, 22.0);
     angleMap.put(3.2, 14.0);
@@ -23,6 +23,4 @@ public class ShotMap {
   public double getGoodRPM(double distanceMeters) {
     return rpmMap.get(distanceMeters);
   }
-
-
 }
