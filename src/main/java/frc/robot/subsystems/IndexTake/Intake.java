@@ -10,6 +10,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
@@ -37,11 +38,11 @@ public class Intake extends SubsystemBase {
   private final LoggedNetworkNumber tunablekP = new LoggedNetworkNumber("Intake/Pivot/kP", 1.0);
   private final LoggedNetworkNumber tunablekD = new LoggedNetworkNumber("Intake/Pivot/kD", 0.001);
   private final LoggedNetworkNumber tunablekG = new LoggedNetworkNumber("Intake/Pivot/kG", 0.9575);
+  private final LoggedNetworkNumber intakeSetpoint = new LoggedNetworkNumber("Intake/Pivot/Setpoint", 0);
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
   private double lastkG = 0.0;
-  private double intakeSetPoint;
 
   public Intake() {
     armConfig.Feedback.SensorToMechanismRatio = arm_Position_Conversion_Factor;
@@ -64,12 +65,11 @@ public class Intake extends SubsystemBase {
 
     setArmOffset();
 
-    SmartDashboard.putNumber("Intake/Pivot/Setpoint", intakeSetPoint);
   }
 
-  public void setArmOffset() {
-    armMotor.setVoltage(-.2);
-    armMotor.setPosition(armOffset);
+  public FunctionalCommand setArmOffset() {
+    return new FunctionalCommand(() -> armMotor.setVoltage(-.2), () -> armMotor.setPosition(armOffset), null, Commands.waitSeconds(.5), null);
+    
   }
 
   public double getArmPosition() {
@@ -77,8 +77,7 @@ public class Intake extends SubsystemBase {
   }
 
   public Command setTunableArmPosition() {
-    double newArmPosition = SmartDashboard.getNumber("Intake/Pivot/Setpoint", intakeSetPoint);
-    return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(newArmPosition)));
+    return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(intakeSetpoint.getAsDouble())));
   }
 
   public Command intakeArmStop() {
@@ -98,16 +97,6 @@ public class Intake extends SubsystemBase {
           spinMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(0));
         },
         () -> false);
-  }
-
-  public Command rawMoveIntake(double voltage) {
-    return this.runEnd(
-        () -> {
-          armMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(voltage));
-        },
-        () -> {
-          armMotor.setControl(new VoltageOut(0));
-        });
   }
 
   public FunctionalCommand functionalRawMoveIntake(double voltage) {

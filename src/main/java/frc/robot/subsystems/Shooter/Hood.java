@@ -3,7 +3,6 @@ package frc.robot.subsystems.Shooter;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
@@ -23,12 +22,11 @@ public class Hood extends SubsystemBase {
 
   private final RelativeEncoder hoodEncoder = hoodMotor.getEncoder();
 
-  private final SparkClosedLoopController hoodController = hoodMotor.getClosedLoopController();
 
   private double hoodtP = 0.008;
   private double hoodtD = 0.0;
   private double hoodtG = 0.01;
-  private double hoodSetpoint = 0.0;
+  private double hoodSetpoint = 20;
   private double hoodFF = 0.0;
 
   public Hood() {
