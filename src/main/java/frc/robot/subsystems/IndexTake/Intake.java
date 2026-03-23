@@ -8,7 +8,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
@@ -38,7 +37,8 @@ public class Intake extends SubsystemBase {
   private final LoggedNetworkNumber tunablekP = new LoggedNetworkNumber("Intake/Pivot/kP", 1.0);
   private final LoggedNetworkNumber tunablekD = new LoggedNetworkNumber("Intake/Pivot/kD", 0.001);
   private final LoggedNetworkNumber tunablekG = new LoggedNetworkNumber("Intake/Pivot/kG", 0.9575);
-  private final LoggedNetworkNumber intakeSetpoint = new LoggedNetworkNumber("Intake/Pivot/Setpoint", 0);
+  private final LoggedNetworkNumber intakeSetpoint =
+      new LoggedNetworkNumber("Intake/Pivot/Setpoint", 0);
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
@@ -64,12 +64,12 @@ public class Intake extends SubsystemBase {
     spinMotor.getConfigurator().apply(spinConfig);
 
     setArmOffset();
-
   }
 
-  public FunctionalCommand setArmOffset() {
-    return new FunctionalCommand(() -> armMotor.setVoltage(-.2), () -> armMotor.setPosition(armOffset), null, Commands.waitSeconds(.5), null);
-    
+  public Command setArmOffset() {
+    return Commands.run(() -> armMotor.setVoltage(-.3), this)
+        .withTimeout(.75)
+        .andThen(Commands.runOnce(() -> armMotor.setPosition(armOffset)));
   }
 
   public double getArmPosition() {
@@ -77,7 +77,8 @@ public class Intake extends SubsystemBase {
   }
 
   public Command setTunableArmPosition() {
-    return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(intakeSetpoint.getAsDouble())));
+    return this.run(
+        () -> armMotor.setControl(motionMagicRequest.withPosition(intakeSetpoint.getAsDouble())));
   }
 
   public Command intakeArmStop() {
@@ -99,13 +100,15 @@ public class Intake extends SubsystemBase {
         () -> false);
   }
 
-  public FunctionalCommand functionalRawMoveIntake(double voltage) {
+  public FunctionalCommand rawMoveIntake(double voltage) {
     return new FunctionalCommand(
         () -> {
           armMotor.setControl(new VoltageOut(voltage));
         },
         () -> {},
-        (interrupted) -> {},
+        (interrupted) -> {
+          armMotor.setControl(new VoltageOut(0));
+        },
         () -> false);
   }
 
@@ -135,7 +138,7 @@ public class Intake extends SubsystemBase {
   public Command moveArmDown() {
     return this.run(
         () -> {
-          functionalRawMoveIntake(0);
+          rawMoveIntake(0);
         });
   }
 }

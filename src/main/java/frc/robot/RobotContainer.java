@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.FullShoot;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.IndexTake.Indexer;
 import frc.robot.subsystems.IndexTake.Intake;
@@ -44,6 +45,7 @@ public class RobotContainer {
   public final Intake intake;
   public final Indexer indexer;
   public final Hood hood;
+  public final FullShoot shootFuel;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -119,6 +121,25 @@ public class RobotContainer {
     indexer = new Indexer();
     hood = new Hood();
 
+    // Register Commands
+    shootFuel = new FullShoot(shooter, intake, indexer);
+
+    NamedCommands.registerCommand(
+        "runWheel",
+        Commands.sequence(
+            intake.rawMoveIntake(-5).withTimeout(.5),
+            Commands.deadline(
+                Commands.waitSeconds(6),
+                shooter.setRPMs(3000),
+                indexer.spinIndexer(),
+                hood.hoodPIDMove())));
+
+    NamedCommands.registerCommand(
+        "intakingMoment",
+        Commands.parallel(
+            Commands.deadline(Commands.waitSeconds(.5), intake.rawMoveIntake(-5)),
+            intake.runIntake(6)));
+
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     // driverControls = new LoggedDashboardChooser<>("DriverSelection");
@@ -138,8 +159,6 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-
-    NamedCommands.registerCommand("runWheel", shooter.spinShooter(1000));
 
     // Configure the button bindings
     configureButtonBindings();
@@ -190,14 +209,20 @@ public class RobotContainer {
     controller.povDown().whileTrue(intake.rawMoveIntake(-5));
     controller.povRight().whileTrue(intake.setTunableArmPosition());
 
-    controller.back().whileTrue(hood.rawMoveHood(-.25));
+    controller.back().whileTrue(hood.zeroHood());
 
     controller.start().onTrue(hood.setHoodAngle(0));
+    controller.leftBumper().whileTrue(indexer.spinIndexerOut());
 
-    controller.povLeft().whileTrue(hood.hoodPIDMove());
+    controller
+        .povLeft()
+        .whileTrue(hood.hoodPIDMove())
+        .onFalse(Commands.waitSeconds(.25).andThen(hood.zeroHood()));
     controller
         .rightBumper()
         .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.spinIndexer()));
+
+    controller.x().whileTrue(shootFuel);
   }
 
   /**

@@ -34,7 +34,7 @@ public class TunerConstants {
   // When using closed-loop control, the drive motor uses the control
   // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
   private static final Slot0Configs driveGains =
-      new Slot0Configs().withKP(2.5).withKI(0).withKD(0).withKS(0).withKV(0.124);
+      new Slot0Configs().withKP(2.5).withKI(0).withKD(0).withKS(0.26247).withKV(0.76964);
 
   // The closed-loop output type to use for the steer motors;
   // This affects the PID/FF gains for the steer motors
@@ -64,7 +64,7 @@ public class TunerConstants {
       new TalonFXConfiguration()
           .withCurrentLimits(
               new CurrentLimitsConfigs()
-                  .withStatorCurrentLimit(Amps.of(30))
+                  .withStatorCurrentLimit(Amps.of(47.5))
                   .withStatorCurrentLimitEnable(true));
   private static final TalonFXConfiguration steerInitialConfigs =
       new TalonFXConfiguration()
@@ -73,7 +73,7 @@ public class TunerConstants {
                   // Swerve azimuth does not require much torque output, so we can set a relatively
                   // low
                   // stator current limit to help avoid brownouts without impacting performance.
-                  .withStatorCurrentLimit(Amps.of(55))
+                  .withStatorCurrentLimit(Amps.of(25))
                   .withStatorCurrentLimitEnable(true));
   private static final CANcoderConfiguration encoderInitialConfigs = new CANcoderConfiguration();
   // Configs for the Pigeon 2; leave this null to skip applying Pigeon 2 configs
@@ -85,7 +85,7 @@ public class TunerConstants {
 
   // Theoretical free speed (m/s) at 12 V applied output;
   // This needs to be tuned to your individual robot
-  public static final LinearVelocity kSpeedAt12Volts = MetersPerSecond.of(6.25);
+  public static final LinearVelocity kSpeedAt12Volts = MetersPerSecond.of(6.75);
 
   // Every 1 rotation of the azimuth results in kCoupleRatio drive motor turns;
   // This may need to be tuned to your individual robot
@@ -93,7 +93,7 @@ public class TunerConstants {
 
   private static final double kDriveGearRatio = 6.122448979591837;
   private static final double kSteerGearRatio = 21.428571428571427;
-  private static final Distance kWheelRadius = Inches.of(2);
+  private static final Distance kWheelRadius = Inches.of(1.964);
 
   private static final boolean kInvertLeftSide = false;
   private static final boolean kInvertRightSide = true;

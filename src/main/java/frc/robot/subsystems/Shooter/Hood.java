@@ -6,6 +6,8 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -18,16 +20,16 @@ public class Hood extends SubsystemBase {
   private final SparkFlex hoodMotor =
       new SparkFlex(ShooterConstants.hoodCanId, SparkFlex.MotorType.kBrushless);
 
-  private final PIDController hoodPID;
+  private PIDController hoodPID;
+  private ArmFeedforward hoodFF;
 
   private final RelativeEncoder hoodEncoder = hoodMotor.getEncoder();
 
-
-  private double hoodtP = 0.008;
+  private double hoodtP = 0.00675;
   private double hoodtD = 0.0;
   private double hoodtG = 0.01;
   private double hoodSetpoint = 20;
-  private double hoodFF = 0.0;
+  private double hoodDeadband = MathUtil.applyDeadband(getHoodAngle(), .1);
 
   public Hood() {
 
@@ -35,10 +37,12 @@ public class Hood extends SubsystemBase {
 
     hoodConfig.idleMode(IdleMode.kBrake);
     hoodConfig.inverted(false);
+    hoodConfig.smartCurrentLimit(25);
 
     hoodMotor.configure(hoodConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     hoodPID = new PIDController(hoodtP, 0, hoodtD);
+    hoodFF = new ArmFeedforward(0, hoodtG, 0);
 
     instantiateTuneables();
   }
@@ -55,11 +59,19 @@ public class Hood extends SubsystemBase {
   }
 
   public Command rawMoveHood(double speed) {
-    return this.runEnd(() -> hoodMotor.set(speed), () -> hoodMotor.set(speed));
+    return this.runEnd(() -> hoodMotor.set(speed), () -> hoodMotor.set(0));
   }
 
   public Command setHoodAngle(double angle) {
     return this.runOnce(() -> hoodEncoder.setPosition(angle));
+  }
+
+  public Command zeroHood() {
+    return Commands.sequence(
+        this.run(() -> hoodMotor.set(-.25)),
+        Commands.waitSeconds(.25),
+        this.run(() -> hoodMotor.set(0)),
+        setHoodAngle(0));
   }
 
   public FunctionalCommand hoodPIDMove() {
@@ -68,16 +80,13 @@ public class Hood extends SubsystemBase {
         () -> {
           double newSetpoint = SmartDashboard.getNumber("Shooter/Hood/Setpoint", hoodSetpoint);
           hoodPID.setSetpoint(newSetpoint);
-          double output = hoodPID.calculate(getHoodAngle());
-          hoodMotor.set(output + hoodFF);
-          SmartDashboard.putNumber("Shooter/Hood/Output", output);
+          double outputPID = hoodPID.calculate(getHoodAngle());
+          double outputFF = hoodFF.calculate(newSetpoint % ShooterConstants.conversionFactor, 0);
+          hoodMotor.set(outputPID + outputFF);
+          SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
+          SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
         },
-        (interrupted) -> {
-          hoodPID.setSetpoint(0);
-          double output = hoodPID.calculate(getHoodAngle());
-          hoodMotor.set(output);
-          Commands.waitSeconds(.5).andThen(setHoodAngle(0));
-        },
+        (interrupted) -> {},
         () -> false);
   }
 
@@ -95,15 +104,9 @@ public class Hood extends SubsystemBase {
     hoodtD = SmartDashboard.getNumber("Shooter/Hood/kD", hoodtD);
     hoodtG = SmartDashboard.getNumber("Shooter/Hood/kG", hoodtG);
 
-    SparkFlexConfig hoodConfig = new SparkFlexConfig();
-
     if (currentHoodkP != hoodtP || currentHoodkD != hoodtD || currentHoodkG != hoodtG) {
-      hoodPID.setPID(hoodtP, 0.0, hoodtD);
-
-      hoodFF = hoodtG;
-
-      hoodMotor.configure(
-          hoodConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+      hoodPID = new PIDController(hoodtP, 0, hoodtD);
+      hoodFF = new ArmFeedforward(0, hoodtG, 0);
     }
   }
 }

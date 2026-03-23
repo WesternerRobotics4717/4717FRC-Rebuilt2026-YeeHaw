@@ -56,6 +56,18 @@ public class Indexer extends SubsystemBase {
         });
   }
 
+  public Command spinIndexerOut() {
+    return this.runEnd(
+        () -> {
+          indexBottom.setVoltage(-9);
+          indexTop.setVoltage(9);
+        },
+        () -> {
+          indexBottom.setVoltage(0);
+          indexTop.setVoltage(0);
+        });
+  }
+
   public Command stopIndexer() {
     return this.run(
         () -> {
@@ -71,10 +83,7 @@ public class Indexer extends SubsystemBase {
           indexTop.set(-voltage * (100 / 12));
         },
         () -> {},
-        (interrupted) -> {
-          indexBottom.setVoltage(0);
-          indexTop.setVoltage(0);
-        },
+        (interrupted) -> {},
         () -> false,
         this);
   }
