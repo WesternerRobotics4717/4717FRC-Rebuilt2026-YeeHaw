@@ -103,6 +103,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void autonomousInit() {
     autonomousCommand = robotContainer.getAutonomousCommand();
+    SignalLogger.stop();
 
     // schedule the autonomous command (example)
     if (autonomousCommand != null) {
@@ -121,6 +122,7 @@ public class Robot extends LoggedRobot {
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
     // this line or comment it out.
+    SignalLogger.stop();
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }

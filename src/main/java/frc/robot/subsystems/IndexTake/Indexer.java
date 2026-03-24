@@ -56,6 +56,11 @@ public class Indexer extends SubsystemBase {
         });
   }
 
+  public void indexerRAW(double voltage) {
+    indexBottom.setVoltage(voltage);
+    indexTop.setVoltage(-voltage);
+  }
+
   public Command spinIndexerOut() {
     return this.runEnd(
         () -> {

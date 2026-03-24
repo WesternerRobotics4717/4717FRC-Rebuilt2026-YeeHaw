@@ -91,11 +91,11 @@ public class Intake extends SubsystemBase {
   public FunctionalCommand runIntake(double voltage) {
     return new FunctionalCommand(
         () -> {
-          spinMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(voltage));
+          spinMotor.setControl(new VoltageOut(voltage));
         },
         () -> {},
         (interrupted) -> {
-          spinMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(0));
+          spinMotor.setControl(new VoltageOut(0));
         },
         () -> false);
   }

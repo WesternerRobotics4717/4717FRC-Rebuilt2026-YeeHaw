@@ -46,6 +46,7 @@ public class RobotContainer {
   public final Indexer indexer;
   public final Hood hood;
   public final FullShoot shootFuel;
+  // public final AutoAim aimRobot;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -127,7 +128,6 @@ public class RobotContainer {
     NamedCommands.registerCommand(
         "runWheel",
         Commands.sequence(
-            intake.rawMoveIntake(-5).withTimeout(.5),
             Commands.deadline(
                 Commands.waitSeconds(6),
                 shooter.setRPMs(3000),
@@ -217,10 +217,14 @@ public class RobotContainer {
     controller
         .povLeft()
         .whileTrue(hood.hoodPIDMove())
-        .onFalse(Commands.waitSeconds(.25).andThen(hood.zeroHood()));
+        .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
     controller
         .rightBumper()
         .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.spinIndexer()));
+
+    //  controller
+    //  .rightBumper()
+    // .onFalse(Commands.parallel(shooter.stopShooter(), indexer.stopIndexer()));
 
     controller.x().whileTrue(shootFuel);
   }

@@ -39,12 +39,12 @@ public class Turret extends SubsystemBase {
 
   // PID
 
-  private double flyWheeltP = 0.0;
+  private double flyWheeltP = 0.01;
   private double flyWheeltD = 0.0;
   private double flyWheeltV = .001802;
   private double flyWheeltS = .15;
 
-  private double rollertP = 0.0;
+  private double rollertP = 0.01;
   private double rollertD = 0.0;
   private double rollertV = 0.001822;
   private double rollertS = 0.31;
@@ -201,12 +201,32 @@ public class Turret extends SubsystemBase {
         });
   }
 
+  public void spinShootervoid(double wheelRPMs) {
+    this.runEnd(
+        () -> {
+          setFlywheelRPM(wheelRPMs);
+          setRollerRPM(wheelRPMs);
+        },
+        () -> {
+          setFlywheelRPM(0);
+          setRollerRPM(0);
+        });
+  }
+
   public Command rawSpinShooter() {
     return this.runEnd(
         () -> {
           flyWheelMotor.set(-.5);
           rollerMotor.set(.5);
         },
+        () -> {
+          flyWheelMotor.set(0);
+          rollerMotor.set(0);
+        });
+  }
+
+  public Command stopShooter() {
+    return this.run(
         () -> {
           flyWheelMotor.set(0);
           rollerMotor.set(0);

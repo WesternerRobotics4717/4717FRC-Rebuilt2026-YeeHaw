@@ -20,16 +20,17 @@ public class FullShoot extends Command {
   }
 
   @Override
-  public void initialize() {
-    indexer.runIndexer(6);
-    intake.moveArmDown();
-  }
+  public void initialize() {}
 
   @Override
   public void execute() {
     System.out.println("shootingFuel");
-    intake.runIntake(5);
+    indexer.indexerRAW(6);
 
     // Commands.repeatingSequence((intake.moveArmDown()));
+  }
+
+  public void end(boolean interrupted) {
+    indexer.indexerRAW(0);
   }
 }

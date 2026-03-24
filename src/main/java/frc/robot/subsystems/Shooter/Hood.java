@@ -25,9 +25,9 @@ public class Hood extends SubsystemBase {
 
   private final RelativeEncoder hoodEncoder = hoodMotor.getEncoder();
 
-  private double hoodtP = 0.00675;
+  private double hoodtP = 0.00835;
   private double hoodtD = 0.0;
-  private double hoodtG = 0.01;
+  private double hoodtG = 0.0195;
   private double hoodSetpoint = 20;
   private double hoodDeadband = MathUtil.applyDeadband(getHoodAngle(), .1);
 
@@ -87,7 +87,8 @@ public class Hood extends SubsystemBase {
           SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
         },
         (interrupted) -> {},
-        () -> false);
+        () -> false,
+        this);
   }
 
   public void periodic() {
