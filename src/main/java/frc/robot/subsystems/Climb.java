@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+/*
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -33,3 +34,4 @@ public class Climb extends SubsystemBase {
     return this.runEnd(() -> climbMotor.setVoltage(-4), () -> climbMotor.setVoltage(0));
   }
 }
+  */

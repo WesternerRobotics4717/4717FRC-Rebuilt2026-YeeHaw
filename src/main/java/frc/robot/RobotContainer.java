@@ -123,7 +123,7 @@ public class RobotContainer {
     hood = new Hood();
 
     // Register Commands
-    shootFuel = new FullShoot(shooter, intake, indexer);
+    shootFuel = new FullShoot(shooter, indexer, intake);
 
     NamedCommands.registerCommand(
         "runWheel",
@@ -213,6 +213,7 @@ public class RobotContainer {
 
     controller.start().onTrue(hood.setHoodAngle(0));
     controller.leftBumper().whileTrue(indexer.spinIndexerOut());
+    controller.rightTrigger().whileTrue(shooter.rawSpinShooter());
 
     controller
         .povLeft()
@@ -220,13 +221,16 @@ public class RobotContainer {
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
     controller
         .rightBumper()
-        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.spinIndexer()));
+        .toggleOnTrue(
+            shooter
+                .rawSpinShooter()
+                .andThen(Commands.waitSeconds(0).andThen(indexer.runIndexer(0))));
 
     //  controller
     //  .rightBumper()
     // .onFalse(Commands.parallel(shooter.stopShooter(), indexer.stopIndexer()));
 
-    controller.x().whileTrue(shootFuel);
+    controller.x().toggleOnTrue(shootFuel);
   }
 
   /**

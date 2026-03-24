@@ -6,7 +6,6 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -14,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 public class Hood extends SubsystemBase {
 
@@ -25,12 +25,16 @@ public class Hood extends SubsystemBase {
 
   private final RelativeEncoder hoodEncoder = hoodMotor.getEncoder();
 
-  private double hoodtP = 0.00835;
-  private double hoodtD = 0.0;
-  private double hoodtG = 0.0195;
-  private double hoodSetpoint = 20;
-  private double hoodDeadband = MathUtil.applyDeadband(getHoodAngle(), .1);
+  private final LoggedNetworkNumber tuneablekP =
+      new LoggedNetworkNumber("Shooter/Hood/kP", 0.00835);
+  private final LoggedNetworkNumber tuneablekD = new LoggedNetworkNumber("Shooter/Hood/kD", 0.0);
+  private final LoggedNetworkNumber tuneablekG = new LoggedNetworkNumber("Shooter/Hood/kG", 0.0195);
+  private final LoggedNetworkNumber hoodSetpoint =
+      new LoggedNetworkNumber("Shooter/Hood/Setpoint", 20);
+  private final LoggedNetworkNumber hoodPosition =
+      new LoggedNetworkNumber("Shooter/Hood/Position", getHoodAngle());
 
+  // TODO: Hood Conversion Factor, better, check if you need the if != and || is needed
   public Hood() {
 
     SparkFlexConfig hoodConfig = new SparkFlexConfig();
@@ -41,17 +45,8 @@ public class Hood extends SubsystemBase {
 
     hoodMotor.configure(hoodConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-    hoodPID = new PIDController(hoodtP, 0, hoodtD);
-    hoodFF = new ArmFeedforward(0, hoodtG, 0);
-
-    instantiateTuneables();
-  }
-
-  public void instantiateTuneables() {
-    SmartDashboard.putNumber("Shooter/Hood/kP", hoodtP);
-    SmartDashboard.putNumber("Shooter/Hood/kD", hoodtD);
-    SmartDashboard.putNumber("Shooter/Hood/kG", hoodtG);
-    SmartDashboard.putNumber("Shooter/Hood/Setpoint", hoodSetpoint);
+    hoodPID = new PIDController(tuneablekP.get(), 0, tuneablekD.get());
+    hoodFF = new ArmFeedforward(0, tuneablekG.get(), 0);
   }
 
   public double getHoodAngle() {
@@ -78,7 +73,7 @@ public class Hood extends SubsystemBase {
     return new FunctionalCommand(
         () -> {},
         () -> {
-          double newSetpoint = SmartDashboard.getNumber("Shooter/Hood/Setpoint", hoodSetpoint);
+          double newSetpoint = hoodSetpoint.get();
           hoodPID.setSetpoint(newSetpoint);
           double outputPID = hoodPID.calculate(getHoodAngle());
           double outputFF = hoodFF.calculate(newSetpoint % ShooterConstants.conversionFactor, 0);
@@ -93,21 +88,17 @@ public class Hood extends SubsystemBase {
 
   public void periodic() {
     periodicTunables();
+    hoodPosition.set(getHoodAngle());
   }
 
   public void periodicTunables() {
-    double currentHoodkP = hoodtP;
-    double currentHoodkD = hoodtD;
-    double currentHoodkG = hoodtG;
-    SmartDashboard.putNumber("Shooter/Hood/Current Position", getHoodAngle());
+    double kP = tuneablekP.get();
+    double kD = tuneablekD.get();
+    double kG = tuneablekG.get();
 
-    hoodtP = SmartDashboard.getNumber("Shooter/Hood/kP", hoodtP);
-    hoodtD = SmartDashboard.getNumber("Shooter/Hood/kD", hoodtD);
-    hoodtG = SmartDashboard.getNumber("Shooter/Hood/kG", hoodtG);
-
-    if (currentHoodkP != hoodtP || currentHoodkD != hoodtD || currentHoodkG != hoodtG) {
-      hoodPID = new PIDController(hoodtP, 0, hoodtD);
-      hoodFF = new ArmFeedforward(0, hoodtG, 0);
+    if (kP != tuneablekP.get() || kD != tuneablekD.get() || kG != tuneablekG.get()) {
+      hoodPID = new PIDController(kP, 0, kD);
+      hoodFF = new ArmFeedforward(0, kG, 0);
     }
   }
 }

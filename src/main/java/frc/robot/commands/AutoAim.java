@@ -41,7 +41,7 @@ public class AutoAim extends Command {
     addRequirements(turret, intake, hood, drive);
   }
 
-  // 15
+  // Fix Target Disttance issue
 
   @Override
   public void execute() {

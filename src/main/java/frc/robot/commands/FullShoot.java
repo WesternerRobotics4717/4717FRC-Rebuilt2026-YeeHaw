@@ -1,5 +1,6 @@
 package frc.robot.commands;
 
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IndexTake.Indexer;
 import frc.robot.subsystems.IndexTake.Intake;
@@ -10,27 +11,37 @@ public class FullShoot extends Command {
   private final Turret turret;
   private final Intake intake;
   private final Indexer indexer;
+  private final Timer timer = new Timer();
 
-  public FullShoot(Turret turret, Intake intake, Indexer indexer) {
-    this.turret = turret;
-    this.intake = intake;
+  private boolean rollerGo = false;
+
+  public FullShoot(Turret turret, Indexer indexer, Intake intake) {
     this.indexer = indexer;
-
+    this.intake = intake;
+    this.turret = turret;
     addRequirements(turret, intake, indexer);
   }
 
   @Override
-  public void initialize() {}
+  public void initialize() {
+    timer.reset();
+    timer.start();
+
+    turret.setRPMs(3000);
+    rollerGo = false;
+  }
 
   @Override
   public void execute() {
-    System.out.println("shootingFuel");
-    indexer.indexerRAW(6);
-
+    if (!rollerGo && timer.hasElapsed(.5)) {
+      indexer.runIndexer(9);
+      rollerGo = true;
+    }
     // Commands.repeatingSequence((intake.moveArmDown()));
   }
 
   public void end(boolean interrupted) {
     indexer.indexerRAW(0);
+    turret.stopShooter();
   }
 }

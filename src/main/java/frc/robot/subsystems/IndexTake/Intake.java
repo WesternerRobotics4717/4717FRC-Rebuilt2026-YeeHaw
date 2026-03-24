@@ -82,7 +82,7 @@ public class Intake extends SubsystemBase {
   }
 
   public Command intakeArmStop() {
-    return this.runOnce(() -> armMotor.setControl(new com.ctre.phoenix6.controls.VoltageOut(0)));
+    return this.runOnce(() -> armMotor.setControl(new VoltageOut(0)));
   }
 
   // public Command moveArmToPosition() {
