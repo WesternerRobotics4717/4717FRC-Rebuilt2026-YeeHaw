@@ -42,13 +42,13 @@ public class Intake extends SubsystemBase {
 
   // Offsets
   private final LoggedNetworkNumber tunablekP =
-      new LoggedNetworkNumber("/Tuning/Intake/Pivot/kP", 1.0);
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/kP", 2.0);
   private final LoggedNetworkNumber tunablekD =
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/kD", 0.001);
   private final LoggedNetworkNumber tunablekG =
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/kG", 0.9575);
   private final LoggedNetworkNumber intakeSetpoint =
-      new LoggedNetworkNumber("/Tuning/Intake/Pivot/Setpoint", 0);
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/Setpoint", .2);
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
@@ -88,9 +88,6 @@ public class Intake extends SubsystemBase {
     armMotor.getConfigurator().apply(armConfig);
     spinMotor.getConfigurator().apply(spinConfig);
     spinFollower.getConfigurator().apply(spinConfig2);
-
-    setArmOffset();
-    armMotor.setPosition(0);
   }
 
   public Command setArmOffset() {
@@ -104,6 +101,11 @@ public class Intake extends SubsystemBase {
   public Command setTunableArmPosition() {
     return this.run(
         () -> armMotor.setControl(motionMagicRequest.withPosition(intakeSetpoint.getAsDouble())));
+  }
+
+  public Command setArmPosition(double targetAngle) {
+    double targetRot = targetAngle / 360;
+    return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(targetRot)));
   }
 
   public Command intakeArmStop() {
@@ -139,11 +141,30 @@ public class Intake extends SubsystemBase {
         () -> false);
   }
 
+  public void runIntakeVoid(double voltage) {
+    new FunctionalCommand(
+        () -> {
+          spinMotor.setControl(new VoltageOut(voltage));
+          spinFollower.setControl(new VoltageOut(voltage));
+        },
+        () -> {},
+        (interrupted) -> {
+          spinMotor.setControl(new VoltageOut(0));
+          spinFollower.setControl(new VoltageOut(0));
+        },
+        () -> false);
+  }
+
+  public void stopIntakeVoid() {
+    spinMotor.setVoltage(0);
+    spinFollower.setVoltage(0);
+  }
+
   @Override
   public void periodic() {
     updateValues();
     Logger.recordOutput("Intake/Pivot/AbsEncoderRot", armSplineEncoder.getPosition());
-    Logger.recordOutput("Intake/Pivot/AbsEncoderDeg", armSplineEncoder.getAngle());
+    Logger.recordOutput("Intake/Pivot/AbsEncoderDeg", armSplineEncoder.getPosition() * 360);
   }
 
   public void updateValues() {
@@ -162,12 +183,5 @@ public class Intake extends SubsystemBase {
       armConfig.Slot0.kG = kG;
       armMotor.getConfigurator().apply(armConfig);
     }
-  }
-
-  public Command moveArmDown() {
-    return this.run(
-        () -> {
-          rawMoveIntake(0);
-        });
   }
 }

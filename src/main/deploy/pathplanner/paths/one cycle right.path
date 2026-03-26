@@ -78,7 +78,7 @@
   "pointTowardsZones": [],
   "eventMarkers": [
     {
-      "name": "intakingMoment",
+      "name": "intakingDown",
       "waypointRelativePos": 0.7,
       "endWaypointRelativePos": 1.1,
       "command": null

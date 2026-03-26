@@ -14,15 +14,18 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AutoAim;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.FullShoot;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.IndexTake.Indexer;
 import frc.robot.subsystems.IndexTake.Intake;
 import frc.robot.subsystems.Shooter.Hood;
+import frc.robot.subsystems.Shooter.ShotMap;
 import frc.robot.subsystems.Shooter.Turret;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
@@ -46,13 +49,15 @@ public class RobotContainer {
   public final Indexer indexer;
   public final Hood hood;
   public final FullShoot shootFuel;
+  public final AutoAim autoAim;
+  public final ShotMap shotMap;
   // public final AutoAim aimRobot;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
+  private final CommandXboxController controller2 = new CommandXboxController(1);
   // TODO: continue working on autonomous. Add control switches, for solo and duo.
-  // TODO: Figure out why Advantage kit isnt logging, and why there is old pathplanner errors, need
-  // to do on robo laptop
+  // TODO: Figure out why Advantage kit isnt logging
   // TODO: Shooter launching way too high, should be able to go lower, need a way to determine, also
   // make roller RPM a function of flywheel rpm
   // change hood angle versus change wheel rpm
@@ -74,24 +79,6 @@ public class RobotContainer {
                 new ModuleIOTalonFX(TunerConstants.FrontRight),
                 new ModuleIOTalonFX(TunerConstants.BackLeft),
                 new ModuleIOTalonFX(TunerConstants.BackRight));
-
-        // The ModuleIOTalonFXS implementation provides an example implementation for
-        // TalonFXS controller connected to a CANdi with a PWM encoder. The
-        // implementations
-        // of ModuleIOTalonFX, ModuleIOTalonFXS, and ModuleIOSpark (from the Spark
-        // swerve
-        // template) can be freely intermixed to support alternative hardware
-        // arrangements.
-        // Please see the AdvantageKit template documentation for more information:
-        // https://docs.advantagekit.org/getting-started/template-projects/talonfx-swerve-template#custom-module-implementations
-        //
-        // drive =
-        // new Drive(
-        // new GyroIOPigeon2(),
-        // new ModuleIOTalonFXS(TunerConstants.FrontLeft),
-        // new ModuleIOTalonFXS(TunerConstants.FrontRight),
-        // new ModuleIOTalonFXS(TunerConstants.BackLeft),
-        // new ModuleIOTalonFXS(TunerConstants.BackRight));
         break;
 
       case SIM:
@@ -121,9 +108,11 @@ public class RobotContainer {
     intake = new Intake();
     indexer = new Indexer();
     hood = new Hood();
+    shotMap = new ShotMap();
 
     // Register Commands
     shootFuel = new FullShoot(shooter, indexer, intake);
+    autoAim = new AutoAim(intake, drive, hood, shooter, indexer, shotMap);
 
     NamedCommands.registerCommand(
         "runWheel",
@@ -135,10 +124,12 @@ public class RobotContainer {
                 hood.hoodPIDMove())));
 
     NamedCommands.registerCommand(
-        "intakingMoment",
-        Commands.parallel(
-            Commands.deadline(Commands.waitSeconds(.5), intake.rawMoveIntake(-5)),
-            intake.runIntake(6)));
+        "intakingDown",
+        Commands.parallel(intake.rawMoveIntake(-5).withTimeout(.5), intake.runIntake(6)));
+
+    NamedCommands.registerCommand(
+        "intakingUp",
+        Commands.parallel(intake.rawMoveIntake(5).withTimeout(.5), intake.runIntake(0)));
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -203,6 +194,8 @@ public class RobotContainer {
                     drive)
                 .ignoringDisable(true));
 
+    // First Controller Controls
+
     controller.a().whileTrue(intake.runIntake(7.5));
 
     controller.povUp().whileTrue(intake.rawMoveIntake(5));
@@ -210,6 +203,13 @@ public class RobotContainer {
     controller.povRight().whileTrue(intake.setTunableArmPosition());
 
     controller.back().whileTrue(hood.zeroHood());
+    controller
+        .start()
+        .toggleOnTrue(autoAim.withInterruptBehavior(InterruptionBehavior.kCancelSelf));
+
+    controller
+        .rightTrigger()
+        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(6)));
 
     // controller.start().onTrue(hood.setHoodAngle(0));
     controller
@@ -222,6 +222,31 @@ public class RobotContainer {
         .onTrue(hood.hoodPIDMove())
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
     controller.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
+
+    // Second Controller Controls
+    controller2.a().whileTrue(intake.runIntake(5));
+
+    controller2.povUp().whileTrue(intake.rawMoveIntake(5));
+    controller2.povDown().whileTrue(intake.rawMoveIntake(-5));
+    controller2.povRight().whileTrue(intake.setTunableArmPosition());
+
+    controller2.back().whileTrue(hood.zeroHood());
+
+    controller2
+        .rightTrigger()
+        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(6)));
+
+    // controller.start().onTrue(hood.setHoodAngle(0));
+    controller2
+        .leftBumper()
+        .whileTrue(
+            Commands.parallel(
+                shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
+    controller2
+        .povLeft()
+        .onTrue(hood.hoodPIDMove())
+        .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
+    controller2.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
 
     //  controller
     //  .rightBumper()

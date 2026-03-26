@@ -101,7 +101,7 @@ public class Drive extends SubsystemBase {
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
   private Pose2d odometryOnlyPose = new Pose2d();
   private final PIDController thetaController =
-      new PIDController(15, 0, 0); // Shitty, but im lazy af
+      new PIDController(10, 0, .02); // Shitty, but im lazy af
 
   public Drive(
       GyroIO gyroIO,

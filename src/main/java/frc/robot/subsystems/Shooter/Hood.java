@@ -83,9 +83,43 @@ public class Hood extends SubsystemBase {
         () -> {},
         () -> {
           double newSetpoint = (hoodSetpoint.get());
+          hoodPID.setSetpoint(newSetpoint / 8);
+          double outputPID = hoodPID.calculate(getHoodAngle());
+          double outputFF = hoodFF.calculate(newSetpoint, 0);
+          hoodMotor.set(outputPID + outputFF);
+          SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
+          SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
+        },
+        (interrupted) -> {},
+        () -> false,
+        this);
+  }
+
+  public FunctionalCommand hoodInputMove(double Setpoint) {
+    return new FunctionalCommand(
+        () -> {},
+        () -> {
+          double newSetpoint = Setpoint;
           hoodPID.setSetpoint(newSetpoint);
           double outputPID = hoodPID.calculate(getHoodAngle());
-          double outputFF = hoodFF.calculate(newSetpoint % ShooterConstants.conversionFactor, 0);
+          double outputFF = hoodFF.calculate(newSetpoint, 0);
+          hoodMotor.set(outputPID + outputFF);
+          SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
+          SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
+        },
+        (interrupted) -> {},
+        () -> false,
+        this);
+  }
+
+  public void hoodVoidMove(double Setpoint) {
+    new FunctionalCommand(
+        () -> {},
+        () -> {
+          double newSetpoint = Setpoint;
+          hoodPID.setSetpoint(newSetpoint);
+          double outputPID = hoodPID.calculate(getHoodAngle());
+          double outputFF = hoodFF.calculate(newSetpoint, 0);
           hoodMotor.set(outputPID + outputFF);
           SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
           SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);

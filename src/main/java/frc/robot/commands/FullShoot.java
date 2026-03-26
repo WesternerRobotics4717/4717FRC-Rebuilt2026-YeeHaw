@@ -14,6 +14,7 @@ public class FullShoot extends Command {
   private final Timer timer = new Timer();
 
   private boolean rollerGo = false;
+  private double targetRPM;
 
   public FullShoot(Turret turret, Indexer indexer, Intake intake) {
     this.indexer = indexer;
@@ -27,22 +28,22 @@ public class FullShoot extends Command {
     timer.reset();
     timer.start();
     System.out.println("ShootingFuel");
-    turret.setRPMs(2000);
+    turret.setRPMs(targetRPM);
     rollerGo = false;
   }
 
   @Override
   public void execute() {
     if (!rollerGo && timer.hasElapsed(.5)) {
-      indexer.indexerRAW(9);
+      indexer.indexerVoid(9);
       rollerGo = true;
     }
 
-    // Commands.repeatingSequence((intake.moveArmDown()));
+    // Commands.repeatingSequence((intake.setArmPosition()));
   }
 
   public void end(boolean interrupted) {
-    indexer.indexerRAW(0);
+    indexer.indexerVoid(0);
     turret.stopShooter();
   }
 }
