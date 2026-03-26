@@ -59,7 +59,7 @@ public class AutoAim extends Command {
         new Rotation2d(targetPose.getX() - robotPose.getX(), targetPose.getY() - robotPose.getY());
 
     // Command systems
-    hood.setHoodAngle(targetAngle);
+    // hood.setHoodAngle(targetAngle);
     turret.setRPMs(targetRPM);
     indexer.spinIndexer();
 

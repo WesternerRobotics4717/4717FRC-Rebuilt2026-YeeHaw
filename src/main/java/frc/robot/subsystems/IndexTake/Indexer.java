@@ -15,11 +15,10 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class Indexer extends SubsystemBase {
 
   // Motors
-
   private final SparkMax indexBottom =
       new SparkMax(IndexTakeConstants.indexerBottomCanId, MotorType.kBrushless);
   private final SparkFlex indexTop =
-      new SparkFlex(IndexTakeConstants.indexerTopCanID, SparkFlex.MotorType.kBrushless);
+      new SparkFlex(IndexTakeConstants.indexerTopCanId, SparkFlex.MotorType.kBrushless);
 
   public Indexer() {
     SparkFlexConfig topConfig = new SparkFlexConfig();
@@ -88,7 +87,10 @@ public class Indexer extends SubsystemBase {
           indexTop.set(-voltage * (100 / 12));
         },
         () -> {},
-        (interrupted) -> {},
+        (interrupted) -> {
+          indexBottom.setVoltage(0);
+          indexTop.setVoltage(0);
+        },
         () -> false,
         this);
   }

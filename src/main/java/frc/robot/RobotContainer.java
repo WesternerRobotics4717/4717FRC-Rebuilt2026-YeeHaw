@@ -203,7 +203,7 @@ public class RobotContainer {
                     drive)
                 .ignoringDisable(true));
 
-    controller.a().whileTrue(intake.runIntake(6));
+    controller.a().whileTrue(intake.runIntake(7.5));
 
     controller.povUp().whileTrue(intake.rawMoveIntake(5));
     controller.povDown().whileTrue(intake.rawMoveIntake(-5));
@@ -211,20 +211,17 @@ public class RobotContainer {
 
     controller.back().whileTrue(hood.zeroHood());
 
-    controller.start().onTrue(hood.setHoodAngle(0));
-    controller.leftBumper().whileTrue(indexer.spinIndexerOut());
-    controller.rightTrigger().whileTrue(shooter.rawSpinShooter());
-
+    // controller.start().onTrue(hood.setHoodAngle(0));
+    controller
+        .leftBumper()
+        .whileTrue(
+            Commands.parallel(
+                shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
     controller
         .povLeft()
-        .whileTrue(hood.hoodPIDMove())
+        .onTrue(hood.hoodPIDMove())
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
-    controller
-        .rightBumper()
-        .toggleOnTrue(
-            shooter
-                .rawSpinShooter()
-                .andThen(Commands.waitSeconds(0).andThen(indexer.runIndexer(0))));
+    controller.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
 
     //  controller
     //  .rightBumper()

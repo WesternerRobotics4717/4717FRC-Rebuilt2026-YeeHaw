@@ -8,45 +8,57 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.revrobotics.ResetMode;
+import com.revrobotics.encoder.SplineEncoder;
+import com.revrobotics.encoder.config.DetachedEncoderConfig;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 public class Intake extends SubsystemBase {
 
   public static final CANBus kCANBus = new CANBus("CTRE Devs");
-
+  // TODO: Need to get the encoder offset for the arm encoder
   // Those Who Declare
-
+  private final SplineEncoder armSplineEncoder =
+      new SplineEncoder(IndexTakeConstants.splineEncoderId);
   private final TalonFX armMotor = new TalonFX(IndexTakeConstants.intakeMoveCanId, kCANBus);
   private final TalonFX spinMotor = new TalonFX(IndexTakeConstants.intakeSpinCanId, kCANBus);
+  private final TalonFX spinFollower =
+      new TalonFX(IndexTakeConstants.intakeSpinFollowerCanId, kCANBus);
   private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0);
   private final TalonFXConfiguration armConfig = new TalonFXConfiguration();
   private final TalonFXConfiguration spinConfig = new TalonFXConfiguration();
+  private final TalonFXConfiguration spinConfig2 = new TalonFXConfiguration();
 
-  private double armOffset = 0; // needs to be tuned
+  private final DetachedEncoderConfig encoderConfig = new DetachedEncoderConfig();
 
-  // Constants (untuned)
+  private double armOffset = 0.347123828125; // needs to be tuned
 
   // Variables
-  private static final double arm_Position_Conversion_Factor = 1 / 20;
 
   // Offsets
-  private final LoggedNetworkNumber tunablekP = new LoggedNetworkNumber("Intake/Pivot/kP", 1.0);
-  private final LoggedNetworkNumber tunablekD = new LoggedNetworkNumber("Intake/Pivot/kD", 0.001);
-  private final LoggedNetworkNumber tunablekG = new LoggedNetworkNumber("Intake/Pivot/kG", 0.9575);
+  private final LoggedNetworkNumber tunablekP =
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/kP", 1.0);
+  private final LoggedNetworkNumber tunablekD =
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/kD", 0.001);
+  private final LoggedNetworkNumber tunablekG =
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/kG", 0.9575);
   private final LoggedNetworkNumber intakeSetpoint =
-      new LoggedNetworkNumber("Intake/Pivot/Setpoint", 0);
+      new LoggedNetworkNumber("/Tuning/Intake/Pivot/Setpoint", 0);
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
   private double lastkG = 0.0;
 
   public Intake() {
-    armConfig.Feedback.SensorToMechanismRatio = arm_Position_Conversion_Factor;
+    armConfig.Feedback.SensorToMechanismRatio = IndexTakeConstants.intakeConversionFactorRatio;
     armConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    armConfig.Feedback.FeedbackRemoteSensorID = 44;
+
     armConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     armConfig.Slot0.GravityType = GravityTypeValue.Arm_Cosine;
     armConfig.Slot0.kG = tunablekG.get();
@@ -56,20 +68,33 @@ public class Intake extends SubsystemBase {
     armConfig.MotionMagic.MotionMagicAcceleration = 100;
     armConfig.MotionMagic.MotionMagicCruiseVelocity = 50;
     armConfig.MotionMagic.MotionMagicJerk = 500;
+    armConfig.CurrentLimits.withStatorCurrentLimit(35);
+    armConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
+    encoderConfig.inverted(false);
+    encoderConfig.dutyCycleOffset(armOffset);
+
+    armSplineEncoder.configure(encoderConfig, ResetMode.kResetSafeParameters);
 
     spinConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     spinConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    spinConfig.CurrentLimits.withStatorCurrentLimit(50);
+    spinConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
+    spinConfig2.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+    spinConfig2.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    spinConfig2.CurrentLimits.withStatorCurrentLimit(50);
+    spinConfig2.CurrentLimits.StatorCurrentLimitEnable = true;
     armMotor.getConfigurator().apply(armConfig);
     spinMotor.getConfigurator().apply(spinConfig);
+    spinFollower.getConfigurator().apply(spinConfig2);
 
     setArmOffset();
+    armMotor.setPosition(0);
   }
 
   public Command setArmOffset() {
-    return Commands.run(() -> armMotor.setVoltage(-.3), this)
-        .withTimeout(.75)
-        .andThen(Commands.runOnce(() -> armMotor.setPosition(armOffset)));
+    return Commands.run(() -> armMotor.setPosition(armOffset));
   }
 
   public double getArmPosition() {
@@ -92,10 +117,12 @@ public class Intake extends SubsystemBase {
     return new FunctionalCommand(
         () -> {
           spinMotor.setControl(new VoltageOut(voltage));
+          spinFollower.setControl(new VoltageOut(voltage));
         },
         () -> {},
         (interrupted) -> {
           spinMotor.setControl(new VoltageOut(0));
+          spinFollower.setControl(new VoltageOut(0));
         },
         () -> false);
   }
@@ -115,6 +142,8 @@ public class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     updateValues();
+    Logger.recordOutput("Intake/Pivot/AbsEncoderRot", armSplineEncoder.getPosition());
+    Logger.recordOutput("Intake/Pivot/AbsEncoderDeg", armSplineEncoder.getAngle());
   }
 
   public void updateValues() {

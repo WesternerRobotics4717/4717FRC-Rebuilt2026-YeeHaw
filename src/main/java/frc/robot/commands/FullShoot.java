@@ -26,17 +26,18 @@ public class FullShoot extends Command {
   public void initialize() {
     timer.reset();
     timer.start();
-
-    turret.setRPMs(3000);
+    System.out.println("ShootingFuel");
+    turret.setRPMs(2000);
     rollerGo = false;
   }
 
   @Override
   public void execute() {
     if (!rollerGo && timer.hasElapsed(.5)) {
-      indexer.runIndexer(9);
+      indexer.indexerRAW(9);
       rollerGo = true;
     }
+
     // Commands.repeatingSequence((intake.moveArmDown()));
   }
 
