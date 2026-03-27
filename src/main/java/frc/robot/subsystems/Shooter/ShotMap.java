@@ -2,6 +2,7 @@ package frc.robot.subsystems.Shooter;
 
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ShotMap {
   private final InterpolatingDoubleTreeMap angleMap = new InterpolatingDoubleTreeMap();
@@ -10,26 +11,40 @@ public class ShotMap {
 
   public ShotMap() {
     // Distance is in Meters, Angle is in degrees, RPM is in RPM, duh,
-    // 38.5 inches, 2500shooter, 2250roller, hood ~6
-    // 90 + 23 + 13.5, 4000shooter, hood ~11.5
+    // Furthest Point is 230 inches away
+    // 84
     // First number is distance, second number is either angle or rpm
     // Need to have values at least every half meter.
-    angleMap.put(5.26, 22.0);
-    angleMap.put(3.2, 14.0);
-    angleMap.put(Units.inchesToMeters(38.5), 6.0);
-    angleMap.put(Units.inchesToMeters(126.5), 11.5);
 
-    rpmMap.put(5.26, 5000.0);
-    rpmMap.put(3.2, 2850.0);
-    rpmMap.put(Units.inchesToMeters(38.5), 2500.0);
-    rpmMap.put(Units.inchesToMeters(126.5), 4000.0);
+    angleMap.put(Units.inchesToMeters(55.0), 6.0);
+    angleMap.put(Units.inchesToMeters(85.0), 8.0);
+    angleMap.put(Units.inchesToMeters(112.0), 10.0);
+    angleMap.put(Units.inchesToMeters(145.0), 15.0);
+    angleMap.put(Units.inchesToMeters(216), 22.0);
+
+    rpmMap.put(Units.inchesToMeters(55.0), 2750.0);
+    rpmMap.put(Units.inchesToMeters(85.0), 3200.0);
+    rpmMap.put(Units.inchesToMeters(112.0), 3400.0);
+    rpmMap.put(Units.inchesToMeters(145.0), 3600.0);
+
+    rpmMap.put(Units.inchesToMeters(216), 4500.0);
   }
 
   public double getGoodHoodAngle(double distanceMeters) {
     return angleMap.get(distanceMeters);
   }
 
+  public double getAngle() {
+    double distance = SmartDashboard.getNumber("AutoAim/TargetDistance", 0.0);
+    return angleMap.get(distance);
+  }
+
   public double getGoodRPM(double distanceMeters) {
     return rpmMap.get(distanceMeters);
+  }
+
+  public double getRPM() {
+    double distance = SmartDashboard.getNumber("AutoAim/TargetDistance", 0.0);
+    return rpmMap.get(distance);
   }
 }

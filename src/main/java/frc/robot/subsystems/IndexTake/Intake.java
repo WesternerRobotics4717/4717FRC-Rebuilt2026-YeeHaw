@@ -11,6 +11,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.ResetMode;
 import com.revrobotics.encoder.SplineEncoder;
 import com.revrobotics.encoder.config.DetachedEncoderConfig;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
@@ -36,7 +37,9 @@ public class Intake extends SubsystemBase {
 
   private final DetachedEncoderConfig encoderConfig = new DetachedEncoderConfig();
 
-  private double armOffset = 0.347123828125; // needs to be tuned
+  private double armOffset = 0.67449456; // needs to be tuned
+
+  boolean hasStartedFiring;
 
   // Variables
 
@@ -55,7 +58,7 @@ public class Intake extends SubsystemBase {
   private double lastkG = 0.0;
 
   public Intake() {
-    armConfig.Feedback.SensorToMechanismRatio = IndexTakeConstants.intakeConversionFactorRatio;
+    armConfig.Feedback.RotorToSensorRatio = IndexTakeConstants.intakeConversionFactorRatio;
     armConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     armConfig.Feedback.FeedbackRemoteSensorID = 44;
 
@@ -88,6 +91,8 @@ public class Intake extends SubsystemBase {
     armMotor.getConfigurator().apply(armConfig);
     spinMotor.getConfigurator().apply(spinConfig);
     spinFollower.getConfigurator().apply(spinConfig2);
+
+    armMotor.setPosition(armSplineEncoder.getPosition());
   }
 
   public Command setArmOffset() {
@@ -106,6 +111,38 @@ public class Intake extends SubsystemBase {
   public Command setArmPosition(double targetAngle) {
     double targetRot = targetAngle / 360;
     return this.run(() -> armMotor.setControl(motionMagicRequest.withPosition(targetRot)));
+  }
+
+  public FunctionalCommand smallTrashCompact(double voltage) {
+    return new FunctionalCommand(
+        () -> {
+          hasStartedFiring = false;
+        },
+        () -> {
+          boolean isHoodAtAngle = SmartDashboard.getBoolean("AutoAim/HoodAtSetpoint", false);
+          boolean isFlywheelAtRPM = SmartDashboard.getBoolean("AutoAim/FlywheelsAtSetpoint", false);
+          if (isHoodAtAngle && isFlywheelAtRPM && !hasStartedFiring) {
+            armMotor.setVoltage(voltage);
+            hasStartedFiring = true;
+          }
+          if ((((armSplineEncoder.getPosition() * 360) > 50) && voltage >= 0)
+              || ((((armSplineEncoder.getPosition() * 360) < 0) && voltage <= 0)))
+            armMotor.setVoltage(0.0);
+        },
+        (interrupted) -> {
+          armMotor.setVoltage(0);
+        },
+        () ->
+            (((armSplineEncoder.getPosition() * 360) > 50) && voltage >= 0)
+                || (((armSplineEncoder.getPosition() * 360) < 0) && voltage <= 0));
+  }
+
+  public Command armUpDown() {
+    return (Commands.repeatingSequence(
+        smallTrashCompact(.85),
+        Commands.waitSeconds(.25),
+        smallTrashCompact(-1),
+        Commands.waitSeconds(.25)));
   }
 
   public Command intakeArmStop() {

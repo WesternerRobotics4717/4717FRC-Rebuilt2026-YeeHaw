@@ -8,9 +8,11 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.littletonrobotics.junction.Logger;
 
 public class Indexer extends SubsystemBase {
 
@@ -19,6 +21,8 @@ public class Indexer extends SubsystemBase {
       new SparkMax(IndexTakeConstants.indexerBottomCanId, MotorType.kBrushless);
   private final SparkFlex indexTop =
       new SparkFlex(IndexTakeConstants.indexerTopCanId, SparkFlex.MotorType.kBrushless);
+
+  boolean hasStartedFiring = false;
 
   public Indexer() {
     SparkFlexConfig topConfig = new SparkFlexConfig();
@@ -108,5 +112,33 @@ public class Indexer extends SubsystemBase {
         },
         () -> false,
         this);
+  }
+
+  public FunctionalCommand fireFuel() {
+    return new FunctionalCommand(
+        () -> {
+          hasStartedFiring = false;
+        },
+        () -> {
+          boolean isHoodAtAngle = SmartDashboard.getBoolean("AutoAim/HoodAtSetpoint", false);
+          boolean isFlywheelAtRPM = SmartDashboard.getBoolean("AutoAim/FlywheelsAtSetpoint", false);
+          if (isHoodAtAngle && isFlywheelAtRPM && !hasStartedFiring) {
+            hasStartedFiring = true;
+            indexBottom.setVoltage(IndexTakeConstants.indexerShotVoltage);
+            indexTop.set(-IndexTakeConstants.indexerShotVoltage * (100 / 12));
+          }
+        },
+        (interrupted) -> {
+          indexBottom.setVoltage(0);
+          indexTop.setVoltage(0);
+        },
+        () -> false,
+        this);
+  }
+
+  @Override
+  public void periodic() {
+    Logger.recordOutput("Indexer/TopOutput", indexTop.getAppliedOutput());
+    Logger.recordOutput("Indexer/BottomOutput", indexBottom.getAppliedOutput());
   }
 }

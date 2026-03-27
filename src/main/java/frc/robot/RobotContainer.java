@@ -115,21 +115,18 @@ public class RobotContainer {
     autoAim = new AutoAim(intake, drive, hood, shooter, indexer, shotMap);
 
     NamedCommands.registerCommand(
-        "runWheel",
-        Commands.sequence(
-            Commands.deadline(
-                Commands.waitSeconds(6),
-                shooter.setRPMs(3000),
-                indexer.spinIndexer(),
-                hood.hoodPIDMove())));
+        "runWheel", (new AutoAim(intake, drive, hood, shooter, indexer, shotMap)).withTimeout(6));
 
     NamedCommands.registerCommand(
         "intakingDown",
-        Commands.parallel(intake.rawMoveIntake(-5).withTimeout(.5), intake.runIntake(6)));
+        Commands.parallel(intake.rawMoveIntake(-5).withTimeout(.7), intake.runIntake(6))
+            .withTimeout((1)));
 
     NamedCommands.registerCommand(
         "intakingUp",
         Commands.parallel(intake.rawMoveIntake(5).withTimeout(.5), intake.runIntake(0)));
+
+    NamedCommands.registerCommand("intakeGo", intake.runIntake(6));
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -169,6 +166,7 @@ public class RobotContainer {
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
+    shooter.setDefaultCommand(shooter.setRPMs(2000));
 
     // Lock to 0° when A button is held
     /*controller
@@ -196,7 +194,9 @@ public class RobotContainer {
 
     // First Controller Controls
 
-    controller.a().whileTrue(intake.runIntake(7.5));
+    controller
+        .a()
+        .whileTrue(Commands.parallel(intake.runIntake(7.5), indexer.spinBottomIndexer(2)));
 
     controller.povUp().whileTrue(intake.rawMoveIntake(5));
     controller.povDown().whileTrue(intake.rawMoveIntake(-5));
@@ -209,7 +209,15 @@ public class RobotContainer {
 
     controller
         .rightTrigger()
-        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(6)));
+        .whileTrue(
+            Commands.parallel(
+                new AutoAim(intake, drive, hood, shooter, indexer, shotMap),
+                shooter.setAutoRPM(() -> shotMap.getRPM()),
+                hood.hoodAutoAim(() -> shotMap.getAngle()),
+                indexer.fireFuel(),
+                intake.runIntake(5),
+                intake.armUpDown()))
+        .onFalse(hood.hoodInputMove(0.0));
 
     // controller.start().onTrue(hood.setHoodAngle(0));
     controller
@@ -224,7 +232,7 @@ public class RobotContainer {
     controller.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
 
     // Second Controller Controls
-    controller2.a().whileTrue(intake.runIntake(5));
+    controller2.a().whileTrue(indexer.runIndexer(5));
 
     controller2.povUp().whileTrue(intake.rawMoveIntake(5));
     controller2.povDown().whileTrue(intake.rawMoveIntake(-5));
@@ -233,8 +241,8 @@ public class RobotContainer {
     controller2.back().whileTrue(hood.zeroHood());
 
     controller2
-        .rightTrigger()
-        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(6)));
+        .rightBumper()
+        .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(8)));
 
     // controller.start().onTrue(hood.setHoodAngle(0));
     controller2
@@ -246,7 +254,6 @@ public class RobotContainer {
         .povLeft()
         .onTrue(hood.hoodPIDMove())
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
-    controller2.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
 
     //  controller
     //  .rightBumper()

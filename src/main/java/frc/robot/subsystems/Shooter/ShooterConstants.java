@@ -5,7 +5,8 @@ public class ShooterConstants {
   public static final int rollerCanId = 51;
   public static final int hoodCanId = 52;
   public static final int shooterHoodThroughBore = 1;
-  public static final double conversionFactor = (1 / 8.0) * 360.0;
+  public static final double conversionFactor = 45;
+  public static final double allowedError = 300;
 
   // Hub Position in Meters (4.625594, 4.034536)
   // Forward is X, Left/Right is Y

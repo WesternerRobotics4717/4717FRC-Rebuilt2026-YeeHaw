@@ -3,6 +3,7 @@ package frc.robot.commands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IndexTake.Indexer;
 import frc.robot.subsystems.IndexTake.Intake;
@@ -33,13 +34,17 @@ public class AutoAim extends Command {
     this.indexer = indexer;
     this.shotMap = shotMap;
 
-    addRequirements(intake, hood, drive);
+    addRequirements(intake, drive);
   }
 
   // Fix Target Disttance issue
 
   @Override
-  public void initialize() {}
+  public void initialize() {
+    //  if (DriverStation.getAlliance().isPresent() &&
+    // DriverStation.getAlliance().get().equals(Alliance.Red)) {
+    // hubCenter = Translation2d(4.625594, 4.034536);} else  {hubCenter = Translation2d()}
+  }
 
   @Override
   public void execute() {
@@ -48,6 +53,7 @@ public class AutoAim extends Command {
 
     // Distance to target
     double distance = robotPose.getTranslation().getDistance(hubCenter);
+    SmartDashboard.putNumber("AutoAim/TargetDistance", distance);
 
     // Get shot values
     double targetAngle = shotMap.getGoodHoodAngle(distance);
@@ -61,11 +67,11 @@ public class AutoAim extends Command {
     Logger.recordOutput("AutoAim/RPM", targetRPM);
     Logger.recordOutput("AutoAim/RobotRotation", angleToTarget);
 
-    // Command systems
-    hood.hoodVoidMove(targetAngle);
-    turret.spinShooterVoid(targetRPM);
-    indexer.indexerVoid(6);
-    intake.runIntakeVoid(5);
+    // // Command systems
+    // hood.hoodVoidMove(targetAngle);
+    // turret.spinShooterVoid(targetRPM);
+    // indexer.indexerVoid(6);
+    // intake.runIntakeVoid(5);
 
     drive.rotateTo((angleToTarget));
   }

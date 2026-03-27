@@ -9,9 +9,11 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
@@ -119,6 +121,38 @@ public class Turret extends SubsystemBase {
         () -> false);
   }
 
+  public FunctionalCommand setAutoRPM(DoubleSupplier rpm) {
+
+    return new FunctionalCommand(
+        () -> {
+          flyWheelController.setSetpoint(
+              rpm.getAsDouble(), SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+          rollerController.setSetpoint(
+              rpm.getAsDouble(), SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+        },
+        () -> {
+          flyWheelController.setSetpoint(
+              rpm.getAsDouble(), SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+          rollerController.setSetpoint(
+              rpm.getAsDouble(), SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+          SmartDashboard.putNumber("AutoAim/Goal Flywheel RPM", rpm.getAsDouble());
+          SmartDashboard.putNumber("AutoAim/Goal Roller RPM", rpm.getAsDouble());
+          SmartDashboard.putBoolean(
+              "AutoAim/FlywheelsAtSetpoint",
+              Math.abs(flyWheelEncoder.getVelocity() - rpm.getAsDouble())
+                  < ShooterConstants.allowedError);
+          SmartDashboard.putBoolean(
+              "AutoAim/RollersAtSetpoint",
+              Math.abs(rollerEncoder.getVelocity() - rpm.getAsDouble())
+                  < ShooterConstants.allowedError);
+        },
+        (interrupted) -> {
+          flyWheelMotor.set(0.0);
+          rollerMotor.set(0);
+        },
+        () -> false);
+  }
+
   public FunctionalCommand setRPMsTunable() {
     return new FunctionalCommand(
         () -> {
@@ -153,7 +187,8 @@ public class Turret extends SubsystemBase {
         },
         () -> {},
         (interrupted) -> {},
-        () -> false);
+        () -> false,
+        this);
   }
 
   public double getFlywheelRPM() {
@@ -246,6 +281,7 @@ public class Turret extends SubsystemBase {
 
     Logger.recordOutput("Shooter/Flywheel/RPM", flyWheelRPM);
     Logger.recordOutput("Shooter/Flywheel/DutyCycle Output", flyWheelDutyCycle);
+    SmartDashboard.putBoolean("AutoAim/FlywheelsAtSetpoint", flyWheelController.isAtSetpoint());
     Logger.recordOutput("Shooter/Roller/RPM", rollerRPM);
     Logger.recordOutput("Shooter/Roller/DutyCycle Output", rollerDutyCycle);
   }

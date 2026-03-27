@@ -5,15 +5,35 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "deadline",
           "data": {
-            "pathName": "Back and SHoot Path"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "intakingDown"
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Back and SHoot Path"
+                }
+              },
+              {
+                "type": "sequential",
+                "data": {
+                  "commands": [
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "intakingDown"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "wait",
+                "data": {
+                  "waitTime": 1.0
+                }
+              }
+            ]
           }
         },
         {

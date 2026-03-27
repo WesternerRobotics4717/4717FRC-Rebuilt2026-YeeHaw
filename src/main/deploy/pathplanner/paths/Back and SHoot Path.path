@@ -20,8 +20,8 @@
         "y": 3.9767760342368046
       },
       "prevControl": {
-        "x": 1.2923395149786017,
-        "y": 3.9767760342368046
+        "x": 2.726089887640449,
+        "y": 4.004426966292135
       },
       "nextControl": null,
       "isLocked": false,
@@ -31,14 +31,7 @@
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [
-    {
-      "name": "runWheel",
-      "waypointRelativePos": 1.0,
-      "endWaypointRelativePos": null,
-      "command": null
-    }
-  ],
+  "eventMarkers": [],
   "globalConstraints": {
     "maxVelocity": 5.0,
     "maxAcceleration": 5.0,
