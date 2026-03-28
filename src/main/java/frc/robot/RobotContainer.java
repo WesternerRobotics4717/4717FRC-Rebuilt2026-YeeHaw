@@ -9,6 +9,7 @@ package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -54,13 +55,11 @@ public class RobotContainer {
   // public final AutoAim aimRobot;
 
   // Controller
-  private final CommandXboxController controller = new CommandXboxController(0);
-  private final CommandXboxController controller2 = new CommandXboxController(1);
+  private final CommandXboxController swerver = new CommandXboxController(0);
+  private final CommandXboxController operator = new CommandXboxController(1);
   // TODO: continue working on autonomous. Add control switches, for solo and duo.
   // TODO: Figure out why Advantage kit isnt logging
-  // TODO: Shooter launching way too high, should be able to go lower, need a way to determine, also
-  // make roller RPM a function of flywheel rpm
-  // change hood angle versus change wheel rpm
+
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   // private final LoggedDashboardChooser<Command> driverControls;
@@ -127,6 +126,23 @@ public class RobotContainer {
         Commands.parallel(intake.rawMoveIntake(5).withTimeout(.5), intake.runIntake(0)));
 
     NamedCommands.registerCommand("intakeGo", intake.runIntake(6));
+    new EventTrigger("dropIntake").onTrue(intake.rawMoveIntake(-7).withTimeout(.5));
+    new EventTrigger("runIntake")
+        .whileTrue(intake.runIntake(7.5).alongWith(indexer.shuffleBottomIndexer()));
+    new EventTrigger("autoFuel")
+        .whileTrue(
+            Commands.parallel(
+                shooter.setAutoRPM(() -> shotMap.getRPM()),
+                hood.hoodAutoAim(() -> shotMap.getAngle()),
+                indexer.runIndexer(7),
+                intake.runIntake(5),
+                intake.armUpDown()))
+        .onFalse(
+            Commands.parallel(
+                shooter.slowShooter(),
+                hood.zeroHood(),
+                indexer.stopIndexer(),
+                intake.stopIntake()));
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -147,6 +163,7 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    // Look at event trigger versus named commands
 
     // Configure the button bindings
     configureButtonBindings();
@@ -163,26 +180,28 @@ public class RobotContainer {
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
-            () -> -controller.getRightX()));
-    shooter.setDefaultCommand(shooter.setRPMs(2000));
+            () -> -swerver.getLeftY(),
+            () -> -swerver.getLeftX(),
+            () -> -swerver.getRightX()));
+    shooter.setDefaultCommand(shooter.setRPMs(1750));
 
+    // Swerver Commands
     // Lock to 0° when A button is held
-    /*controller
-    .a()
-    .whileTrue(
-        DriveCommands.joystickDriveAtAngle(
-            drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
-            () -> Rotation2d.kZero)); */
+    swerver
+        .y()
+        .whileTrue(
+            DriveCommands.joystickDriveAtAngle(
+                drive,
+                () -> -swerver.getLeftY(),
+                () -> -swerver.getLeftX(),
+                () -> Rotation2d.kZero));
 
-    // Switch to X pattern when X button is pressed
-    // controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    // TODO: lock to hub aiming while driving
+
+    swerver.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     // Reset gyro to 0° when B button is pressed
-    controller
+    swerver
         .b()
         .onTrue(
             Commands.runOnce(
@@ -191,23 +210,18 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
-
-    // First Controller Controls
-
-    controller
+    swerver
         .a()
-        .whileTrue(Commands.parallel(intake.runIntake(7.5), indexer.spinBottomIndexer(2)));
+        .toggleOnTrue(Commands.parallel(intake.runIntake(7.5), indexer.shuffleBottomIndexer()));
 
-    controller.povUp().whileTrue(intake.rawMoveIntake(5));
-    controller.povDown().whileTrue(intake.rawMoveIntake(-5));
-    controller.povRight().whileTrue(intake.setTunableArmPosition());
+    swerver.povUp().whileTrue(intake.rawMoveIntake(5));
+    swerver.povDown().whileTrue(intake.rawMoveIntake(-5));
+    swerver.povRight().whileTrue(intake.setTunableArmPosition());
 
-    controller.back().whileTrue(hood.zeroHood());
-    controller
-        .start()
-        .toggleOnTrue(autoAim.withInterruptBehavior(InterruptionBehavior.kCancelSelf));
+    swerver.back().whileTrue(hood.zeroHood());
+    swerver.start().toggleOnTrue(autoAim.withInterruptBehavior(InterruptionBehavior.kCancelSelf));
 
-    controller
+    swerver
         .rightTrigger()
         .whileTrue(
             Commands.parallel(
@@ -217,49 +231,42 @@ public class RobotContainer {
                 indexer.fireFuel(),
                 intake.runIntake(5),
                 intake.armUpDown()))
-        .onFalse(hood.hoodInputMove(0.0));
+        .onFalse(hood.zeroHood());
 
     // controller.start().onTrue(hood.setHoodAngle(0));
-    controller
+    swerver
         .leftBumper()
         .whileTrue(
             Commands.parallel(
                 shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
-    controller
+    swerver
         .povLeft()
         .onTrue(hood.hoodPIDMove())
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
-    controller.rightBumper().toggleOnTrue(shooter.setRPMsTunable());
+    swerver.rightBumper().toggleOnTrue(shooter.setRPMsTunable().alongWith());
 
     // Second Controller Controls
-    controller2.a().whileTrue(indexer.runIndexer(5));
+    operator.a().whileTrue(indexer.runIndexer(5));
 
-    controller2.povUp().whileTrue(intake.rawMoveIntake(5));
-    controller2.povDown().whileTrue(intake.rawMoveIntake(-5));
-    controller2.povRight().whileTrue(intake.setTunableArmPosition());
+    operator.povUp().whileTrue(intake.rawMoveIntake(5));
+    operator.povDown().whileTrue(intake.rawMoveIntake(-5));
+    operator.povRight().whileTrue(intake.setTunableArmPosition());
 
-    controller2.back().whileTrue(hood.zeroHood());
+    operator.back().whileTrue(hood.zeroHood());
 
-    controller2
+    operator
         .rightBumper()
         .whileTrue(Commands.parallel(shooter.setRPMsTunable(), indexer.runIndexer(8)));
 
-    // controller.start().onTrue(hood.setHoodAngle(0));
-    controller2
+    operator
         .leftBumper()
         .whileTrue(
             Commands.parallel(
                 shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
-    controller2
+    operator
         .povLeft()
         .onTrue(hood.hoodPIDMove())
         .onFalse(Commands.waitSeconds(.2).andThen(hood.zeroHood()));
-
-    //  controller
-    //  .rightBumper()
-    // .onFalse(Commands.parallel(shooter.stopShooter(), indexer.stopIndexer()));
-
-    controller.x().toggleOnTrue(shootFuel);
   }
 
   /**

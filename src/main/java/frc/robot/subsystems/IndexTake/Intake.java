@@ -197,6 +197,10 @@ public class Intake extends SubsystemBase {
     spinFollower.setVoltage(0);
   }
 
+  public Command stopIntake() {
+    return this.run(() -> runIntake(0));
+  }
+
   @Override
   public void periodic() {
     updateValues();

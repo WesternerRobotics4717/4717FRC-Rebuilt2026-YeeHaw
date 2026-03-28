@@ -9,7 +9,7 @@
       "prevControl": null,
       "nextControl": {
         "x": 7.95947218259629,
-        "y": 0.819743223965763
+        "y": 0.8197432239657629
       },
       "isLocked": false,
       "linkedName": null
@@ -78,9 +78,15 @@
   "pointTowardsZones": [],
   "eventMarkers": [
     {
-      "name": "intakingDown",
+      "name": "dropIntake",
       "waypointRelativePos": 0.0,
-      "endWaypointRelativePos": 2.3946530872055773,
+      "endWaypointRelativePos": null,
+      "command": null
+    },
+    {
+      "name": "runIntake",
+      "waypointRelativePos": 0.5,
+      "endWaypointRelativePos": 2.5,
       "command": null
     },
     {

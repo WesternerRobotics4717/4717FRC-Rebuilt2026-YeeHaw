@@ -56,7 +56,7 @@ public class Turret extends SubsystemBase {
   private final LoggedNetworkNumber rollertD =
       new LoggedNetworkNumber("/Tuning/Shooter/Roller/kD", 0.0);
   private final LoggedNetworkNumber rollertV =
-      new LoggedNetworkNumber("/Tuning/Shooter/Roller/kV", 0.00185);
+      new LoggedNetworkNumber("/Tuning/Shooter/Roller/kV", 0.0018575);
   private final LoggedNetworkNumber rollertS =
       new LoggedNetworkNumber("/Tuning/Shooter/Roller/kS", 0.0);
   private final LoggedNetworkNumber rollertA =
@@ -248,13 +248,33 @@ public class Turret extends SubsystemBase {
         });
   }
 
-  public Command stopShooter() {
-    return this.run(
+  public Command slowShooter() {
+    return this.runOnce(
+        () -> {
+          flyWheelController.setSetpoint(
+              ShooterConstants.restingShooterRPM,
+              SparkBase.ControlType.kVelocity,
+              ClosedLoopSlot.kSlot0);
+          rollerController.setSetpoint(
+              ShooterConstants.restingShooterRPM,
+              SparkBase.ControlType.kVelocity,
+              ClosedLoopSlot.kSlot0);
+        });
+  }
+
+  public Command fullStopShooter() {
+    return this.runOnce(
         () -> {
           flyWheelMotor.set(0);
           rollerMotor.set(0);
-          flyWheelController.setSetpoint(0, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
-          rollerController.setSetpoint(0, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+          flyWheelController.setSetpoint(
+              ShooterConstants.restingShooterRPM,
+              SparkBase.ControlType.kVelocity,
+              ClosedLoopSlot.kSlot0);
+          rollerController.setSetpoint(
+              ShooterConstants.restingShooterRPM,
+              SparkBase.ControlType.kVelocity,
+              ClosedLoopSlot.kSlot0);
         });
   }
 

@@ -15,6 +15,7 @@ public class ShotMap {
     // 84
     // First number is distance, second number is either angle or rpm
     // Need to have values at least every half meter.
+    // 124
 
     angleMap.put(Units.inchesToMeters(55.0), 6.0);
     angleMap.put(Units.inchesToMeters(85.0), 8.0);
@@ -26,7 +27,6 @@ public class ShotMap {
     rpmMap.put(Units.inchesToMeters(85.0), 3200.0);
     rpmMap.put(Units.inchesToMeters(112.0), 3400.0);
     rpmMap.put(Units.inchesToMeters(145.0), 3600.0);
-
     rpmMap.put(Units.inchesToMeters(216), 4500.0);
   }
 

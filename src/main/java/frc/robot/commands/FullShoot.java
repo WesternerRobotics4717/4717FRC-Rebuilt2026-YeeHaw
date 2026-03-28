@@ -44,6 +44,6 @@ public class FullShoot extends Command {
 
   public void end(boolean interrupted) {
     indexer.indexerVoid(0);
-    turret.stopShooter();
+    turret.slowShooter();
   }
 }
