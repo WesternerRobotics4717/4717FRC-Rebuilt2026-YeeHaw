@@ -11,6 +11,7 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.function.DoubleSupplier;
@@ -93,7 +94,7 @@ public class Turret extends SubsystemBase {
     SparkFlexConfig rollerConfig = new SparkFlexConfig();
     rollerConfig.inverted(false);
     rollerConfig.idleMode(IdleMode.kCoast);
-    rollerConfig.smartCurrentLimit(40);
+    rollerConfig.smartCurrentLimit(35);
     rollerConfig.closedLoop.feedForward.kV(rollertV.get());
     rollerConfig.closedLoop.feedForward.kS(rollertS.get());
     rollerConfig.closedLoop.feedForward.kA(rollertA.get());
@@ -147,8 +148,7 @@ public class Turret extends SubsystemBase {
                   < ShooterConstants.allowedError);
         },
         (interrupted) -> {
-          flyWheelMotor.set(0.0);
-          rollerMotor.set(0);
+          slowShooter();
         },
         () -> false);
   }
@@ -249,17 +249,18 @@ public class Turret extends SubsystemBase {
   }
 
   public Command slowShooter() {
-    return this.runOnce(
-        () -> {
-          flyWheelController.setSetpoint(
-              ShooterConstants.restingShooterRPM,
-              SparkBase.ControlType.kVelocity,
-              ClosedLoopSlot.kSlot0);
-          rollerController.setSetpoint(
-              ShooterConstants.restingShooterRPM,
-              SparkBase.ControlType.kVelocity,
-              ClosedLoopSlot.kSlot0);
-        });
+    return this.run(
+            () -> {
+              flyWheelController.setSetpoint(
+                  ShooterConstants.restingShooterRPM,
+                  SparkBase.ControlType.kVelocity,
+                  ClosedLoopSlot.kSlot0);
+              rollerController.setSetpoint(
+                  ShooterConstants.restingShooterRPM,
+                  SparkBase.ControlType.kVelocity,
+                  ClosedLoopSlot.kSlot0);
+            })
+        .withInterruptBehavior(InterruptionBehavior.kCancelSelf);
   }
 
   public Command fullStopShooter() {

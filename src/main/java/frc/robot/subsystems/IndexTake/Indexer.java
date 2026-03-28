@@ -31,7 +31,7 @@ public class Indexer extends SubsystemBase {
 
     topConfig.idleMode(IdleMode.kCoast);
     bottomConfig.idleMode(IdleMode.kCoast);
-    topConfig.smartCurrentLimit(40);
+    topConfig.smartCurrentLimit(60);
     bottomConfig.smartCurrentLimit(40);
 
     indexBottom.configure(
@@ -48,8 +48,8 @@ public class Indexer extends SubsystemBase {
     return this.runEnd(
         () ->
             Commands.repeatingSequence(
-                spinBottomIndexer(2), Commands.waitSeconds(2),
-                spinBottomIndexer(-2), Commands.waitSeconds(2)),
+                spinBottomIndexer(2), Commands.waitSeconds(1.5),
+                spinBottomIndexer(-2), Commands.waitSeconds(1.5)),
         () -> spinBottomIndexer(0));
   }
 
@@ -61,7 +61,7 @@ public class Indexer extends SubsystemBase {
     return this.runEnd(
         () -> {
           indexBottom.setVoltage(9);
-          indexTop.setVoltage(-9);
+          indexTop.setVoltage(-12);
         },
         () -> {
           indexBottom.setVoltage(0);

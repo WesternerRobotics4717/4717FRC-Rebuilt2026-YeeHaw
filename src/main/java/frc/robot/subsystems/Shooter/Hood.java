@@ -48,7 +48,7 @@ public class Hood extends SubsystemBase {
 
     hoodConfig.idleMode(IdleMode.kBrake);
     hoodConfig.inverted(false);
-    hoodConfig.smartCurrentLimit(25);
+    hoodConfig.smartCurrentLimit(20);
     hoodConfig.absoluteEncoder.positionConversionFactor(ShooterConstants.conversionFactor);
     hoodConfig.absoluteEncoder.zeroOffset(hoodOffset);
     hoodConfig.absoluteEncoder.inverted(true);
@@ -77,10 +77,8 @@ public class Hood extends SubsystemBase {
   // }
 
   public Command zeroHood() {
-    return Commands.sequence(
-        this.run(() -> hoodMotor.set(-.25)),
-        Commands.waitSeconds(.25),
-        this.run(() -> hoodMotor.stopMotor()));
+    return this.run(() -> hoodMotor.set(-.25))
+        .andThen(Commands.waitSeconds(.25).andThen(this.run(() -> hoodMotor.stopMotor())));
   }
 
   public FunctionalCommand hoodPIDMove() {

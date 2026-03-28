@@ -3,12 +3,16 @@ package frc.robot.subsystems.vision;
 import static frc.robot.subsystems.vision.VisionConstants.pvConstants.*;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.estimator.PoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
+import frc.robot.subsystems.drive.Drive;
 import gg.questnav.questnav.PoseFrame;
 import gg.questnav.questnav.QuestNav;
 
@@ -33,6 +37,12 @@ public class LocalizationSystem extends SubsystemBase {
     questNav.setPose(questPose);
   }
 
+  public Command zeroQNav() {
+    Pose3d cornerPose = new Pose3d(0.8382, 0.457, 0, new Rotation3d(0, 0, 1.5 * Math.PI));
+    
+    return this.runOnce(() -> questNav.setPose(cornerPose.transformBy(ROBOT_TO_QUEST)));
+  }
+
   @Override
   public void periodic() {
 
@@ -45,7 +55,8 @@ public class LocalizationSystem extends SubsystemBase {
 
       double timestamp = frame.dataTimestamp();
 
-      Pose3d robotPose = questPose.transformBy(ROBOT_TO_QUEST.inverse());
+      Pose3d robotPose =
+          questPose.transformBy(ROBOT_TO_QUEST.inverse()); // Added corner pose condition
 
       RobotContainer.drive.addVisionMeasurement(robotPose.toPose2d(), timestamp, QUEST_STD_DEVS);
     }
