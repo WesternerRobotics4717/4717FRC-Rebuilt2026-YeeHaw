@@ -11,5 +11,5 @@ public class IndexTakeConstants {
   public static final double intakeConversionFactorRatio = 100 / 1;
   public static final double intakeStowPos = 0.014;
   public static final double intakeDeployPos = 0.394;
-  public static final double indexerShotVoltage = 8;
+  public static final double indexerShotVoltage = 10;
 }

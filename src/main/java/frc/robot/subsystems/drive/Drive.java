@@ -131,12 +131,16 @@ public class Drive extends SubsystemBase {
         new PPHolonomicDriveController(
             new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
         PP_CONFIG,
-        () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+        () -> {
+          var alliance = DriverStation.getAlliance();
+          return alliance.isPresent() ? alliance.get() == DriverStation.Alliance.Red : false;
+        },
         this);
     Pathfinding.setPathfinder(new LocalADStarAK());
     PathPlannerLogging.setLogActivePathCallback(
         (activePath) -> {
-          Logger.recordOutput("Odometry/Trajectory", activePath.toArray(new Pose2d[0]));
+          Logger.recordOutput(
+              "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
         });
     PathPlannerLogging.setLogTargetPoseCallback(
         (targetPose) -> {
@@ -344,8 +348,16 @@ public class Drive extends SubsystemBase {
   }
 
   /** Resets the current odometry pose. */
-  public void setPose(Pose2d pose) {
-    poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+  public Command setPose(Pose2d pose) {
+
+    return this.run(() -> poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose));
+  }
+
+  public Command setPoseAaron(Pose2d pose) {
+
+    rawGyroRotation = pose.getRotation();
+    gyroIO.resetGyro(rawGyroRotation);
+    return this.run(() -> poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose));
   }
 
   /** Adds a new timestamped vision measurement. */

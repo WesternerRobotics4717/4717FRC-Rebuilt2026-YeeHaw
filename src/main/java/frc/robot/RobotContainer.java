@@ -133,6 +133,24 @@ public class RobotContainer {
     new EventTrigger("dropIntake").onTrue(intake.rawMoveIntake(-8).withTimeout(.75));
     new EventTrigger("runIntake")
         .whileTrue(intake.runIntake(7.5).alongWith(indexer.shuffleBottomIndexer()));
+    new EventTrigger("shittyScoreClose")
+        .whileTrue(
+            Commands.parallel(
+                shooter.setRPMs(3000),
+                hood.hoodInputMove(9.5),
+                Commands.waitSeconds(.5).andThen(indexer.spinIndexer()),
+                intake.runIntake(6),
+                intake.ezUpDown().withTimeout(1.25)))
+        .onFalse(intake.rawMoveIntake(-8).withTimeout(.5));
+    new EventTrigger("shittyScoreFar")
+        .whileTrue(
+            Commands.parallel(
+                shooter.setRPMs(3800),
+                hood.hoodInputMove(17),
+                Commands.waitSeconds(.5).andThen(indexer.spinIndexer()),
+                intake.runIntake(6),
+                intake.ezUpDown().withTimeout(1.25)))
+        .onFalse(intake.rawMoveIntake(-8).withTimeout(.5));
     new EventTrigger("autoFuel")
         .whileTrue(
             Commands.parallel(
@@ -189,7 +207,6 @@ public class RobotContainer {
             () -> -swerver.getLeftY(),
             () -> -swerver.getLeftX(),
             () -> -swerver.getRightX()));
-    shooter.setDefaultCommand(shooter.slowShooter());
 
     // Swerver Commands
     // Lock to 0° when Y button is held
@@ -202,8 +219,6 @@ public class RobotContainer {
                 () -> -swerver.getLeftX(),
                 () -> Rotation2d.kZero));
 
-    // swerver.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
-
     // Reset gyro to 0° when B button is pressed
     swerver
         .b()
@@ -214,6 +229,7 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
+
     swerver
         .a()
         .toggleOnTrue(Commands.parallel(intake.runIntake(7.5), indexer.shuffleBottomIndexer()));
@@ -222,18 +238,15 @@ public class RobotContainer {
     swerver.povDown().whileTrue(intake.rawMoveIntake(-5));
 
     swerver.leftBumper().whileTrue(Commands.parallel(indexer.runIndexer(-8), intake.runIntake(-4)));
-    // swerver.rightBumper().toggleOnTrue(shooter.setRPMsTunable().alongWith(hood.hoodPIDMove()));
-    swerver.x().onTrue(questNav.zeroQNav());
-    // Second Controller Controls
+
     operator
         .a()
         .toggleOnTrue(Commands.parallel(intake.runIntake(7.5), indexer.shuffleBottomIndexer()));
 
     operator.povUp().whileTrue(intake.rawMoveIntake(5));
     operator.povDown().whileTrue(intake.rawMoveIntake(-5));
-    operator.povRight().whileTrue(intake.setTunableArmPosition());
 
-    operator.back().whileTrue(hood.zeroHood());
+    operator.back().whileTrue(hood.accZeroHood());
 
     operator
         .leftTrigger()
@@ -245,8 +258,11 @@ public class RobotContainer {
         .povLeft()
         .whileTrue(
             Commands.parallel(
-                shooter.setRPMs(3400.0), hood.hoodInputMove(10), indexer.runIndexer(7)))
-        .onFalse(hood.zeroHood().alongWith(shooter.slowShooter()));
+                shooter.setRPMs(3400.0),
+                hood.hoodInputMove(10 + 9),
+                Commands.waitSeconds(.25).andThen(indexer.spinIndexer()),
+                intake.ezUpDown()))
+        .onFalse(hood.accZeroHood().alongWith(shooter.slowShooter()));
     operator
         .rightTrigger()
         .whileTrue(
@@ -257,13 +273,18 @@ public class RobotContainer {
                 indexer.fireFuel(),
                 intake.runIntake(5),
                 intake.armUpDown()))
-        .onFalse(hood.zeroHood());
+        .onFalse(hood.accZeroHood());
     operator
         .povRight()
         .whileTrue(
             Commands.parallel(
-                shooter.setRPMs(2750.0), hood.hoodInputMove(6), indexer.runIndexer(7)))
-        .onFalse(hood.zeroHood().alongWith(shooter.slowShooter()));
+                shooter.setRPMs(2750.0),
+                hood.hoodInputMove(6 + 9),
+                Commands.waitSeconds(.25).andThen(indexer.spinIndexer()),
+                intake.ezUpDown()))
+        .onFalse(hood.accZeroHood().alongWith(shooter.slowShooter()));
+
+    operator.b().toggleOnTrue(shooter.slowShooter());
   }
 
   /**

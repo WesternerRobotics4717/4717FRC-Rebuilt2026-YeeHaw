@@ -81,6 +81,20 @@ public class Hood extends SubsystemBase {
         .andThen(Commands.waitSeconds(.25).andThen(this.run(() -> hoodMotor.stopMotor())));
   }
 
+  public FunctionalCommand accZeroHood() {
+    return new FunctionalCommand(
+        () -> {
+          hoodPID.setSetpoint(0);
+          hoodMotor.set(-.25);
+        },
+        () -> {},
+        (interrupted) -> {
+          hoodMotor.set(0);
+        },
+        () -> hoodPID.atSetpoint(),
+        this);
+  }
+
   public FunctionalCommand hoodPIDMove() {
     return new FunctionalCommand(
         () -> {},
@@ -123,15 +137,17 @@ public class Hood extends SubsystemBase {
     return new FunctionalCommand(
         () -> {},
         () -> {
-          double newSetpoint = Setpoint;
-          hoodPID.setSetpoint(newSetpoint);
-          double outputPID = hoodPID.calculate(getHoodAngle());
-          double outputFF = hoodFF.calculate(newSetpoint, 0);
+          hoodPID.setSetpoint(Setpoint);
+          hoodPID.setPID(tuneablekP.get(), 0.0, tuneablekD.get());
+          double outputPID = hoodPID.calculate(getHoodAngle(), Setpoint);
+          double outputFF = hoodFF.calculate(Units.degreesToRadians(Setpoint), 0);
           hoodMotor.set(outputPID + outputFF);
           SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
           SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
         },
-        (interrupted) -> {},
+        (interrupted) -> {
+          accZeroHood();
+        },
         () -> false,
         this);
   }

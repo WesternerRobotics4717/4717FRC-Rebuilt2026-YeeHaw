@@ -146,6 +146,14 @@ public class Intake extends SubsystemBase {
         Commands.waitSeconds(.25)));
   }
 
+  public Command ezUpDown() {
+    return (Commands.repeatingSequence(
+        this.autoMoveIntake(.85),
+        Commands.waitSeconds(.25),
+        this.autoMoveIntake(-1),
+        Commands.waitSeconds(.25)));
+  }
+
   public Command intakeArmStop() {
     return this.runOnce(() -> armMotor.setControl(new VoltageOut(0)));
   }
@@ -178,6 +186,16 @@ public class Intake extends SubsystemBase {
         (interrupted) -> {
           armMotor.setControl(new VoltageOut(0));
         },
+        () -> false);
+  }
+
+  public FunctionalCommand autoMoveIntake(double voltage) {
+    return new FunctionalCommand(
+        () -> {
+          armMotor.setControl(new VoltageOut(voltage));
+        },
+        () -> {},
+        (interrupted) -> {},
         () -> false);
   }
 

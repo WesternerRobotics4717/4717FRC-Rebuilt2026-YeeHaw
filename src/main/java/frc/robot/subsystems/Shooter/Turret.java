@@ -78,7 +78,7 @@ public class Turret extends SubsystemBase {
     SparkFlexConfig flywheelConfig = new SparkFlexConfig();
 
     flywheelConfig.idleMode(IdleMode.kCoast);
-    flywheelConfig.smartCurrentLimit(40);
+    flywheelConfig.smartCurrentLimit(30);
     flywheelConfig.inverted(true);
 
     flywheelConfig.closedLoop.pid(flyWheeltP.get(), 0, flyWheeltD.get());
@@ -149,6 +149,7 @@ public class Turret extends SubsystemBase {
         },
         (interrupted) -> {
           slowShooter();
+          rollerMotor.set(0);
         },
         () -> false);
   }
@@ -249,16 +250,15 @@ public class Turret extends SubsystemBase {
   }
 
   public Command slowShooter() {
-    return this.run(
+    return this.runEnd(
             () -> {
               flyWheelController.setSetpoint(
                   ShooterConstants.restingShooterRPM,
                   SparkBase.ControlType.kVelocity,
                   ClosedLoopSlot.kSlot0);
-              rollerController.setSetpoint(
-                  ShooterConstants.restingShooterRPM,
-                  SparkBase.ControlType.kVelocity,
-                  ClosedLoopSlot.kSlot0);
+            },
+            () -> {
+              flyWheelMotor.set(0);
             })
         .withInterruptBehavior(InterruptionBehavior.kCancelSelf);
   }
@@ -327,7 +327,7 @@ public class Turret extends SubsystemBase {
         || flyWheelkS != flyWheeltS.get()) {
 
       flywheelConfig.idleMode(IdleMode.kCoast);
-      flywheelConfig.smartCurrentLimit(40);
+      flywheelConfig.smartCurrentLimit(30);
       flywheelConfig.inverted(true);
 
       flywheelConfig.closedLoop.pid(flyWheelkP, 0, flyWheelkD);
@@ -343,7 +343,7 @@ public class Turret extends SubsystemBase {
         || rollerkV != rollertV.get()
         || rollerkS != rollertS.get()) {
       rollerConfig.idleMode(IdleMode.kCoast);
-      rollerConfig.smartCurrentLimit(45);
+      rollerConfig.smartCurrentLimit(35);
 
       rollerConfig.closedLoop.pid(rollertP.get(), 0, rollertD.get());
       rollerConfig.closedLoop.feedForward.kV(rollertV.get());
