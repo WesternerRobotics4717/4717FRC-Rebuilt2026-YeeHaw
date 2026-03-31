@@ -52,6 +52,7 @@ public class Intake extends SubsystemBase {
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/kG", 0.9575);
   private final LoggedNetworkNumber intakeSetpoint =
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/Setpoint", .2);
+  public boolean isRunning = false;
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
@@ -157,9 +158,11 @@ public class Intake extends SubsystemBase {
         () -> {
           spinMotor.setControl(new VoltageOut(voltage));
           spinFollower.setControl(new VoltageOut(voltage));
+          isRunning = true;
         },
         () -> {},
         (interrupted) -> {
+          isRunning = false;
           spinMotor.setControl(new VoltageOut(0));
           spinFollower.setControl(new VoltageOut(0));
         },
@@ -206,6 +209,7 @@ public class Intake extends SubsystemBase {
     updateValues();
     Logger.recordOutput("Intake/Pivot/AbsEncoderRot", armSplineEncoder.getPosition());
     Logger.recordOutput("Intake/Pivot/AbsEncoderDeg", armSplineEncoder.getPosition() * 360);
+    Logger.recordOutput("Intake/Pivot/IsRunning?", isRunning);
   }
 
   public void updateValues() {

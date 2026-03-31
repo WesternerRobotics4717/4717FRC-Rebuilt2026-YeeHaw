@@ -12,6 +12,7 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.units.measure.*;
+import frc.robot.subsystems.drive.CommonDriveConstants;
 
 // import frc.robot.subsystems.CommandSwerveDrivetrain;
 
@@ -59,13 +60,16 @@ public class TunerConstants {
   private static final Current kSlipCurrent = Amps.of(80);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
-  // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.
+  // Some configs will be overwritten; check the `with*InitialConfigs()` API documentationd.
+
   private static final TalonFXConfiguration driveInitialConfigs =
       new TalonFXConfiguration()
           .withCurrentLimits(
               new CurrentLimitsConfigs()
-                  .withStatorCurrentLimit(Amps.of(47.5))
-                  .withStatorCurrentLimitEnable(true));
+                  .withStatorCurrentLimit(Amps.of(CommonDriveConstants.kStatorCurrentLimitDrive))
+                  .withStatorCurrentLimitEnable(true)
+                  .withSupplyCurrentLimit(Amps.of(CommonDriveConstants.kSupplyCurrentLimitDrive))
+                  .withSupplyCurrentLimitEnable(true));
   private static final TalonFXConfiguration steerInitialConfigs =
       new TalonFXConfiguration()
           .withCurrentLimits(
@@ -74,7 +78,9 @@ public class TunerConstants {
                   // low
                   // stator current limit to help avoid brownouts without impacting performance.
                   .withStatorCurrentLimit(Amps.of(25))
-                  .withStatorCurrentLimitEnable(true));
+                  .withStatorCurrentLimitEnable(true)
+                  .withSupplyCurrentLimit(Amps.of(40))
+                  .withSupplyCurrentLimitEnable(true));
   private static final CANcoderConfiguration encoderInitialConfigs = new CANcoderConfiguration();
   // Configs for the Pigeon 2; leave this null to skip applying Pigeon 2 configs
   private static final Pigeon2Configuration pigeonConfigs = null;

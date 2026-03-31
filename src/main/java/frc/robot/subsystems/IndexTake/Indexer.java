@@ -48,8 +48,8 @@ public class Indexer extends SubsystemBase {
     return this.runEnd(
         () ->
             Commands.repeatingSequence(
-                spinBottomIndexer(2), Commands.waitSeconds(2),
-                spinBottomIndexer(-2), Commands.waitSeconds(2)),
+                spinBottomIndexer(2), Commands.waitSeconds(.25),
+                spinBottomIndexer(-2), Commands.waitSeconds(.25)),
         () -> spinBottomIndexer(0));
   }
 

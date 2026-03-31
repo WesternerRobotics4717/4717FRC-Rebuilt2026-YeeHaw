@@ -147,8 +147,7 @@ public class Turret extends SubsystemBase {
                   < ShooterConstants.allowedError);
         },
         (interrupted) -> {
-          flyWheelMotor.set(0.0);
-          rollerMotor.set(0);
+          slowShooter();
         },
         () -> false);
   }
@@ -168,8 +167,7 @@ public class Turret extends SubsystemBase {
           updateOdometry();
         },
         (interrupted) -> {
-          flyWheelMotor.set(0.0);
-          rollerMotor.set(0.0);
+          slowShooter();
         },
         () -> false);
   }
@@ -186,7 +184,9 @@ public class Turret extends SubsystemBase {
               rollerRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
         },
         () -> {},
-        (interrupted) -> {},
+        (interrupted) -> {
+          slowShooter();
+        },
         () -> false,
         this);
   }
@@ -247,19 +247,17 @@ public class Turret extends SubsystemBase {
           rollerMotor.set(0);
         });
   }
-
+  // AddBoolean check
   public Command slowShooter() {
-    return this.runOnce(
+    return this.runEnd(
         () -> {
           flyWheelController.setSetpoint(
               ShooterConstants.restingShooterRPM,
               SparkBase.ControlType.kVelocity,
               ClosedLoopSlot.kSlot0);
-          rollerController.setSetpoint(
-              ShooterConstants.restingShooterRPM,
-              SparkBase.ControlType.kVelocity,
-              ClosedLoopSlot.kSlot0);
-        });
+          rollerMotor.set(0);
+        },
+        () -> flyWheelMotor.set(0));
   }
 
   public Command fullStopShooter() {

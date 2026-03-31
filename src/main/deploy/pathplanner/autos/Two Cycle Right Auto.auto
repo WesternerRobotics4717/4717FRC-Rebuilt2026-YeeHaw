@@ -11,9 +11,21 @@
           }
         },
         {
+          "type": "wait",
+          "data": {
+            "waitTime": 4.0
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "Post-Shoot, Then Trench"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Fin"
           }
         }
       ]

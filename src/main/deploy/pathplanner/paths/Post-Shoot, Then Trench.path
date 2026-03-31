@@ -3,16 +3,16 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 2.685325842696629,
-        "y": 3.036280898876405
+        "x": 2.9263338088445074,
+        "y": 2.8769900142653353
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.512078651685393,
-        "y": 1.3853370786516859
+        "x": 2.7530866178332705,
+        "y": 1.2260461940406162
       },
       "isLocked": false,
-      "linkedName": "endOne"
+      "linkedName": "shootOneRIght"
     },
     {
       "anchor": {
@@ -44,7 +44,12 @@
       "linkedName": "endTwo"
     }
   ],
-  "rotationTargets": [],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 1.7273652085452653,
+      "rotationDegrees": 0.0
+    }
+  ],
   "constraintZones": [],
   "pointTowardsZones": [],
   "eventMarkers": [],

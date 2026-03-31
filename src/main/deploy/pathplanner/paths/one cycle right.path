@@ -3,71 +3,75 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 4.039058487874465,
-        "y": 0.5739087018544944
+        "x": 3.5732667617689007,
+        "y": 0.5997860199714706
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.95947218259629,
-        "y": 0.8197432239657629
+        "x": 7.493680456490726,
+        "y": 0.8456205420827392
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.627966292134831,
-        "y": 0.7421112696148362
+        "x": 7.998288159771754,
+        "y": 0.7679885877318122
       },
       "prevControl": {
-        "x": 7.610128388017117,
-        "y": 0.4703994293865924
+        "x": 7.998288159771754,
+        "y": 0.495691847127868
       },
       "nextControl": {
-        "x": 7.7087904534268965,
-        "y": 1.9732470271931648
+        "x": 7.998288159771754,
+        "y": 2.1136091298145514
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.627966292134831,
-        "y": 3.209528089887641
+        "x": 7.674821683309556,
+        "y": 3.265149786019972
       },
       "prevControl": {
-        "x": 7.87311146105756,
-        "y": 3.2585571236721926
+        "x": 7.972410841654778,
+        "y": 3.3427817403708993
       },
       "nextControl": {
-        "x": 6.679936761749342,
-        "y": 3.0199221838105204
+        "x": 6.739325225869257,
+        "y": 3.021107231905111
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 2.685325842696629,
-        "y": 3.036280898876405
+        "x": 2.9263338088445074,
+        "y": 2.8769900142653353
       },
       "prevControl": {
-        "x": 2.6547528089887633,
-        "y": 1.9764157303370782
+        "x": 2.8957607751366403,
+        "y": 1.8171248457260085
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "endOne"
+      "linkedName": "shootOneRIght"
     }
   ],
   "rotationTargets": [
+    {
+      "waypointRelativePos": 0.19226856561546954,
+      "rotationDegrees": 0.0
+    },
     {
       "waypointRelativePos": 0.45,
       "rotationDegrees": 88.89829388479362
     },
     {
-      "waypointRelativePos": 1.7120792079207523,
-      "rotationDegrees": 125.00000000000001
+      "waypointRelativePos": 2.0,
+      "rotationDegrees": 90.0
     },
     {
       "waypointRelativePos": 2.5849440488301103,
@@ -90,7 +94,7 @@
       "command": null
     },
     {
-      "name": "runWheel",
+      "name": "shittyScoreClose",
       "waypointRelativePos": 3.0,
       "endWaypointRelativePos": null,
       "command": null
