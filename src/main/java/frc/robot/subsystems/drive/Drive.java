@@ -391,8 +391,7 @@ public class Drive extends SubsystemBase {
 
   public void resetGyro() {
     Rotation2d robotRotation =
-        DriverStation.getAlliance().isPresent()
-                && DriverStation.getAlliance().get().equals(Alliance.Red)
+        DriverStation.getAlliance().isPresent() && false
             ? Rotation2d.fromDegrees(180.0)
             : Rotation2d.fromDegrees(0.0);
     gyroIO.resetGyro(robotRotation);

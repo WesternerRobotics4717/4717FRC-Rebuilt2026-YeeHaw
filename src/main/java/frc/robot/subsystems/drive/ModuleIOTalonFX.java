@@ -106,8 +106,13 @@ public class ModuleIOTalonFX implements ModuleIO {
     driveConfig.Feedback.SensorToMechanismRatio = constants.DriveMotorGearRatio;
     driveConfig.TorqueCurrent.PeakForwardTorqueCurrent = constants.SlipCurrent;
     driveConfig.TorqueCurrent.PeakReverseTorqueCurrent = -constants.SlipCurrent;
-    driveConfig.CurrentLimits.StatorCurrentLimit = constants.SlipCurrent;
+
+    driveConfig.CurrentLimits.SupplyCurrentLimit = CommonDriveConstants.kSupplyCurrentLimitDrive;
+    driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+    driveConfig.CurrentLimits.StatorCurrentLimit = CommonDriveConstants.kStatorCurrentLimitDrive;
     driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
     driveConfig.MotorOutput.Inverted =
         constants.DriveMotorInverted
             ? InvertedValue.Clockwise_Positive
@@ -129,6 +134,13 @@ public class ModuleIOTalonFX implements ModuleIO {
               "You have selected a turn feedback source that is not supported by the default implementation of ModuleIOTalonFX. Please check the AdvantageKit documentation for more information on alternative configurations: https://docs.advantagekit.org/getting-started/template-projects/talonfx-swerve-template#custom-module-implementations");
         };
     turnConfig.Feedback.RotorToSensorRatio = constants.SteerMotorGearRatio;
+
+    turnConfig.CurrentLimits.SupplyCurrentLimit = CommonDriveConstants.kSupplyCurrentLimitSteer;
+    turnConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+    turnConfig.CurrentLimits.StatorCurrentLimit = CommonDriveConstants.kStatorCurrentLimitSteer;
+    turnConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
     turnConfig.MotionMagic.MotionMagicCruiseVelocity = 100.0 / constants.SteerMotorGearRatio;
     turnConfig.MotionMagic.MotionMagicAcceleration =
         turnConfig.MotionMagic.MotionMagicCruiseVelocity / 0.1;

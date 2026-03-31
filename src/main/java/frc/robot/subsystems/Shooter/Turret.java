@@ -11,7 +11,6 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.function.DoubleSupplier;
@@ -78,7 +77,7 @@ public class Turret extends SubsystemBase {
     SparkFlexConfig flywheelConfig = new SparkFlexConfig();
 
     flywheelConfig.idleMode(IdleMode.kCoast);
-    flywheelConfig.smartCurrentLimit(30);
+    flywheelConfig.smartCurrentLimit(40);
     flywheelConfig.inverted(true);
 
     flywheelConfig.closedLoop.pid(flyWheeltP.get(), 0, flyWheeltD.get());
@@ -94,7 +93,7 @@ public class Turret extends SubsystemBase {
     SparkFlexConfig rollerConfig = new SparkFlexConfig();
     rollerConfig.inverted(false);
     rollerConfig.idleMode(IdleMode.kCoast);
-    rollerConfig.smartCurrentLimit(35);
+    rollerConfig.smartCurrentLimit(40);
     rollerConfig.closedLoop.feedForward.kV(rollertV.get());
     rollerConfig.closedLoop.feedForward.kS(rollertS.get());
     rollerConfig.closedLoop.feedForward.kA(rollertA.get());
@@ -149,7 +148,6 @@ public class Turret extends SubsystemBase {
         },
         (interrupted) -> {
           slowShooter();
-          rollerMotor.set(0);
         },
         () -> false);
   }
@@ -169,8 +167,7 @@ public class Turret extends SubsystemBase {
           updateOdometry();
         },
         (interrupted) -> {
-          flyWheelMotor.set(0.0);
-          rollerMotor.set(0.0);
+          slowShooter();
         },
         () -> false);
   }
@@ -187,7 +184,9 @@ public class Turret extends SubsystemBase {
               rollerRPM, SparkBase.ControlType.kVelocity, ClosedLoopSlot.kSlot0);
         },
         () -> {},
-        (interrupted) -> {},
+        (interrupted) -> {
+          slowShooter();
+        },
         () -> false,
         this);
   }
@@ -248,19 +247,17 @@ public class Turret extends SubsystemBase {
           rollerMotor.set(0);
         });
   }
-
+  // AddBoolean check
   public Command slowShooter() {
     return this.runEnd(
-            () -> {
-              flyWheelController.setSetpoint(
-                  ShooterConstants.restingShooterRPM,
-                  SparkBase.ControlType.kVelocity,
-                  ClosedLoopSlot.kSlot0);
-            },
-            () -> {
-              flyWheelMotor.set(0);
-            })
-        .withInterruptBehavior(InterruptionBehavior.kCancelSelf);
+        () -> {
+          flyWheelController.setSetpoint(
+              ShooterConstants.restingShooterRPM,
+              SparkBase.ControlType.kVelocity,
+              ClosedLoopSlot.kSlot0);
+          rollerMotor.set(0);
+        },
+        () -> flyWheelMotor.set(0));
   }
 
   public Command fullStopShooter() {
@@ -327,7 +324,7 @@ public class Turret extends SubsystemBase {
         || flyWheelkS != flyWheeltS.get()) {
 
       flywheelConfig.idleMode(IdleMode.kCoast);
-      flywheelConfig.smartCurrentLimit(30);
+      flywheelConfig.smartCurrentLimit(40);
       flywheelConfig.inverted(true);
 
       flywheelConfig.closedLoop.pid(flyWheelkP, 0, flyWheelkD);
@@ -343,7 +340,7 @@ public class Turret extends SubsystemBase {
         || rollerkV != rollertV.get()
         || rollerkS != rollertS.get()) {
       rollerConfig.idleMode(IdleMode.kCoast);
-      rollerConfig.smartCurrentLimit(35);
+      rollerConfig.smartCurrentLimit(45);
 
       rollerConfig.closedLoop.pid(rollertP.get(), 0, rollertD.get());
       rollerConfig.closedLoop.feedForward.kV(rollertV.get());

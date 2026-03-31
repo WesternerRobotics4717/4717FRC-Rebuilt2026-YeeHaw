@@ -11,7 +11,6 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.function.DoubleSupplier;
@@ -27,8 +26,6 @@ public class Hood extends SubsystemBase {
   // 131.33953857421875
   private final AbsoluteEncoder hoodEncoder = hoodMotor.getAbsoluteEncoder();
 
-  double hoodOffset = 0.36969376;
-
   private final LoggedNetworkNumber tuneablekP =
       new LoggedNetworkNumber("Tuning/Shooter/Hood/kP", 0.00835);
   private final LoggedNetworkNumber tuneablekD =
@@ -39,8 +36,6 @@ public class Hood extends SubsystemBase {
       new LoggedNetworkNumber("Tuning/Shooter/Hood/Setpoint", 20);
   private final LoggedNetworkNumber hoodPosition =
       new LoggedNetworkNumber("Tuning/Shooter/Hood/Position", getHoodAngle());
-  private final LoggedNetworkNumber hoodEncoderOffset =
-      new LoggedNetworkNumber("Tuning/Shooter/Hood/Offset", hoodOffset);
 
   public Hood() {
 
@@ -48,9 +43,8 @@ public class Hood extends SubsystemBase {
 
     hoodConfig.idleMode(IdleMode.kBrake);
     hoodConfig.inverted(false);
-    hoodConfig.smartCurrentLimit(20);
+    hoodConfig.smartCurrentLimit(25);
     hoodConfig.absoluteEncoder.positionConversionFactor(ShooterConstants.conversionFactor);
-    hoodConfig.absoluteEncoder.zeroOffset(hoodOffset);
     hoodConfig.absoluteEncoder.inverted(true);
     hoodConfig.closedLoop.positionWrappingEnabled(true);
 
@@ -77,22 +71,7 @@ public class Hood extends SubsystemBase {
   // }
 
   public Command zeroHood() {
-    return this.run(() -> hoodMotor.set(-.25))
-        .andThen(Commands.waitSeconds(.25).andThen(this.run(() -> hoodMotor.stopMotor())));
-  }
-
-  public FunctionalCommand accZeroHood() {
-    return new FunctionalCommand(
-        () -> {
-          hoodPID.setSetpoint(0);
-          hoodMotor.set(-.25);
-        },
-        () -> {},
-        (interrupted) -> {
-          hoodMotor.set(0);
-        },
-        () -> hoodPID.atSetpoint(),
-        this);
+    return this.run(() -> rawMoveHood(.5).withTimeout(.5));
   }
 
   public FunctionalCommand hoodPIDMove() {
@@ -108,7 +87,9 @@ public class Hood extends SubsystemBase {
           SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
           SmartDashboard.putBoolean("AutoAim/HoodAtSetpoint", hoodPID.atSetpoint());
         },
-        (interrupted) -> {},
+        (interrupted) -> {
+          rawMoveHood(.5).withTimeout(.5);
+        },
         () -> false,
         this);
   }
@@ -137,17 +118,15 @@ public class Hood extends SubsystemBase {
     return new FunctionalCommand(
         () -> {},
         () -> {
-          hoodPID.setSetpoint(Setpoint);
-          hoodPID.setPID(tuneablekP.get(), 0.0, tuneablekD.get());
-          double outputPID = hoodPID.calculate(getHoodAngle(), Setpoint);
-          double outputFF = hoodFF.calculate(Units.degreesToRadians(Setpoint), 0);
+          double newSetpoint = Setpoint;
+          hoodPID.setSetpoint(newSetpoint);
+          double outputPID = hoodPID.calculate(getHoodAngle());
+          double outputFF = hoodFF.calculate(newSetpoint, 0);
           hoodMotor.set(outputPID + outputFF);
           SmartDashboard.putNumber("Shooter/Hood/OutputPID", outputPID);
           SmartDashboard.putNumber("Shooter/Hood/OutputFF", outputFF);
         },
-        (interrupted) -> {
-          accZeroHood();
-        },
+        (interrupted) -> {},
         () -> false,
         this);
   }

@@ -52,7 +52,7 @@ public class Intake extends SubsystemBase {
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/kG", 0.9575);
   private final LoggedNetworkNumber intakeSetpoint =
       new LoggedNetworkNumber("/Tuning/Intake/Pivot/Setpoint", .2);
-  private boolean intakeRunning = false;
+  public boolean isRunning = false;
 
   private double lastkP = 0.0;
   private double lastkD = 0.0;
@@ -82,12 +82,12 @@ public class Intake extends SubsystemBase {
 
     spinConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     spinConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-    spinConfig.CurrentLimits.withStatorCurrentLimit(45);
+    spinConfig.CurrentLimits.withStatorCurrentLimit(50);
     spinConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
     spinConfig2.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     spinConfig2.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    spinConfig2.CurrentLimits.withStatorCurrentLimit(45);
+    spinConfig2.CurrentLimits.withStatorCurrentLimit(50);
     spinConfig2.CurrentLimits.StatorCurrentLimitEnable = true;
     armMotor.getConfigurator().apply(armConfig);
     spinMotor.getConfigurator().apply(spinConfig);
@@ -146,14 +146,6 @@ public class Intake extends SubsystemBase {
         Commands.waitSeconds(.25)));
   }
 
-  public Command ezUpDown() {
-    return (Commands.repeatingSequence(
-        this.autoMoveIntake(.85),
-        Commands.waitSeconds(.25),
-        this.autoMoveIntake(-1),
-        Commands.waitSeconds(.25)));
-  }
-
   public Command intakeArmStop() {
     return this.runOnce(() -> armMotor.setControl(new VoltageOut(0)));
   }
@@ -164,13 +156,13 @@ public class Intake extends SubsystemBase {
   public FunctionalCommand runIntake(double voltage) {
     return new FunctionalCommand(
         () -> {
-          intakeRunning = true;
           spinMotor.setControl(new VoltageOut(voltage));
           spinFollower.setControl(new VoltageOut(voltage));
+          isRunning = true;
         },
         () -> {},
         (interrupted) -> {
-          intakeRunning = false;
+          isRunning = false;
           spinMotor.setControl(new VoltageOut(0));
           spinFollower.setControl(new VoltageOut(0));
         },
@@ -186,16 +178,6 @@ public class Intake extends SubsystemBase {
         (interrupted) -> {
           armMotor.setControl(new VoltageOut(0));
         },
-        () -> false);
-  }
-
-  public FunctionalCommand autoMoveIntake(double voltage) {
-    return new FunctionalCommand(
-        () -> {
-          armMotor.setControl(new VoltageOut(voltage));
-        },
-        () -> {},
-        (interrupted) -> {},
         () -> false);
   }
 
@@ -225,9 +207,9 @@ public class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     updateValues();
-    Logger.recordOutput("Intake/IsSpinning?", intakeRunning);
     Logger.recordOutput("Intake/Pivot/AbsEncoderRot", armSplineEncoder.getPosition());
     Logger.recordOutput("Intake/Pivot/AbsEncoderDeg", armSplineEncoder.getPosition() * 360);
+    Logger.recordOutput("Intake/Pivot/IsRunning?", isRunning);
   }
 
   public void updateValues() {

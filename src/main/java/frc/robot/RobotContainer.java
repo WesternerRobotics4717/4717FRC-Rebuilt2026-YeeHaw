@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-// import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoAim;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.FullShoot;
@@ -33,7 +32,6 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.subsystems.vision.LocalizationSystem;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -52,8 +50,6 @@ public class RobotContainer {
   public final FullShoot shootFuel;
   public final AutoAim autoAim;
   public final ShotMap shotMap;
-  public final LocalizationSystem questNav;
-
   // public final AutoAim aimRobot;
 
   // Controller
@@ -110,17 +106,17 @@ public class RobotContainer {
     indexer = new Indexer();
     hood = new Hood();
     shotMap = new ShotMap();
-    questNav = new LocalizationSystem();
 
     // Register Commands
     shootFuel = new FullShoot(shooter, indexer, intake);
-    autoAim = new AutoAim(drive, shotMap);
+    autoAim = new AutoAim(intake, drive, hood, shooter, indexer, shotMap);
 
-    NamedCommands.registerCommand("runWheel", (new AutoAim(drive, shotMap)).withTimeout(6));
+    NamedCommands.registerCommand(
+        "runWheel", (new AutoAim(intake, drive, hood, shooter, indexer, shotMap)).withTimeout(6));
 
     NamedCommands.registerCommand(
         "intakingDown",
-        Commands.parallel(intake.rawMoveIntake(-8).withTimeout(.7), intake.runIntake(6))
+        Commands.parallel(intake.rawMoveIntake(-5).withTimeout(.7), intake.runIntake(6))
             .withTimeout((1)));
 
     NamedCommands.registerCommand(
@@ -128,29 +124,21 @@ public class RobotContainer {
         Commands.parallel(intake.rawMoveIntake(5).withTimeout(.5), intake.runIntake(0)));
 
     NamedCommands.registerCommand("intakeGo", intake.runIntake(6));
-
-    // Event Triggers
-    new EventTrigger("dropIntake").onTrue(intake.rawMoveIntake(-8).withTimeout(.75));
+    new EventTrigger("dropIntake").onTrue(intake.rawMoveIntake(-9).withTimeout(1.3));
     new EventTrigger("runIntake")
-        .whileTrue(intake.runIntake(7.5).alongWith(indexer.shuffleBottomIndexer()));
+        .whileTrue(intake.runIntake(8).alongWith(indexer.shuffleBottomIndexer()));
     new EventTrigger("shittyScoreClose")
-        .whileTrue(
-            Commands.parallel(
-                shooter.setRPMs(3000),
-                hood.hoodInputMove(9.5),
-                Commands.waitSeconds(.5).andThen(indexer.spinIndexer()),
-                intake.runIntake(6),
-                intake.ezUpDown().withTimeout(1.25)))
-        .onFalse(intake.rawMoveIntake(-8).withTimeout(.5));
+        .whileTrue(shooter.setRPMs(2750).alongWith(hood.hoodInputMove(7)))
+        .onFalse(
+            shooter
+                .slowShooter()
+                .alongWith(hood.rawMoveHood(-.25).withDeadline(Commands.waitSeconds(2))));
     new EventTrigger("shittyScoreFar")
-        .whileTrue(
-            Commands.parallel(
-                shooter.setRPMs(3800),
-                hood.hoodInputMove(17),
-                Commands.waitSeconds(.5).andThen(indexer.spinIndexer()),
-                intake.runIntake(6),
-                intake.ezUpDown().withTimeout(1.25)))
-        .onFalse(intake.rawMoveIntake(-8).withTimeout(.5));
+        .whileTrue(shooter.setRPMs(3600).alongWith(hood.hoodInputMove(12)))
+        .onFalse(
+            shooter
+                .slowShooter()
+                .alongWith(hood.rawMoveHood(-.25).withDeadline(Commands.waitSeconds(2))));
     new EventTrigger("autoFuel")
         .whileTrue(
             Commands.parallel(
@@ -171,8 +159,7 @@ public class RobotContainer {
     // driverControls = new LoggedDashboardChooser<>("DriverSelection");
 
     // Set up SysId routines
-    /*
-    autoChooser.addOption(
+    /*autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
     autoChooser.addOption(
         "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
@@ -186,7 +173,6 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse)); */
-
     // Look at event trigger versus named commands
 
     // Configure the button bindings
@@ -209,7 +195,7 @@ public class RobotContainer {
             () -> -swerver.getRightX()));
 
     // Swerver Commands
-    // Lock to 0° when Y button is held
+    // Lock to 0° when A button is held
     swerver
         .y()
         .whileTrue(
@@ -218,6 +204,10 @@ public class RobotContainer {
                 () -> -swerver.getLeftY(),
                 () -> -swerver.getLeftX(),
                 () -> Rotation2d.kZero));
+
+    // TODO: lock to hub aiming while driving
+
+    swerver.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     // Reset gyro to 0° when B button is pressed
     swerver
@@ -230,60 +220,53 @@ public class RobotContainer {
                     drive)
                 .ignoringDisable(true));
 
-    swerver
-        .a()
-        .toggleOnTrue(Commands.parallel(intake.runIntake(7.5), indexer.shuffleBottomIndexer()));
+    swerver.y().onTrue(Commands.run(() -> drive.resetGyro()));
 
     swerver.povUp().whileTrue(intake.rawMoveIntake(5));
     swerver.povDown().whileTrue(intake.rawMoveIntake(-5));
 
-    swerver.leftBumper().whileTrue(Commands.parallel(indexer.runIndexer(-8), intake.runIntake(-4)));
+    // controller.start().onTrue(hood.setHoodAngle(0));
+    swerver
+        .leftBumper()
+        .whileTrue(
+            Commands.parallel(
+                shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
 
+    // Second Controller Controls
     operator
         .a()
         .toggleOnTrue(Commands.parallel(intake.runIntake(7.5), indexer.shuffleBottomIndexer()));
+    operator.x().whileTrue(intake.runIntake(-2.25));
 
     operator.povUp().whileTrue(intake.rawMoveIntake(5));
     operator.povDown().whileTrue(intake.rawMoveIntake(-5));
 
-    operator.back().whileTrue(hood.accZeroHood());
-
-    operator
-        .leftTrigger()
-        .whileTrue(
-            Commands.parallel(
-                shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
-    operator.leftBumper().whileTrue(indexer.runIndexer(-5));
     operator
         .povLeft()
         .whileTrue(
-            Commands.parallel(
-                shooter.setRPMs(3400.0),
-                hood.hoodInputMove(10 + 9),
-                Commands.waitSeconds(.25).andThen(indexer.spinIndexer()),
-                intake.ezUpDown()))
-        .onFalse(hood.accZeroHood().alongWith(shooter.slowShooter()));
-    operator
-        .rightTrigger()
-        .whileTrue(
-            Commands.parallel(
-                new AutoAim(drive, shotMap),
-                shooter.setAutoRPM(() -> shotMap.getRPM()),
-                hood.hoodAutoAim(() -> shotMap.getAngle()),
-                indexer.fireFuel(),
-                intake.runIntake(5),
-                intake.armUpDown()))
-        .onFalse(hood.accZeroHood());
+            Commands.parallel(shooter.setRPMs(3000), indexer.runIndexer(7), hood.hoodInputMove(8)));
     operator
         .povRight()
         .whileTrue(
             Commands.parallel(
-                shooter.setRPMs(2750.0),
-                hood.hoodInputMove(6 + 9),
-                Commands.waitSeconds(.25).andThen(indexer.spinIndexer()),
-                intake.ezUpDown()))
-        .onFalse(hood.accZeroHood().alongWith(shooter.slowShooter()));
+                shooter.setRPMs(3400), indexer.runIndexer(7), hood.hoodInputMove(12)));
+    operator
+        .rightTrigger()
+        .whileTrue(
+            Commands.parallel(
+                shooter.setAutoRPM(() -> shotMap.getRPM()),
+                hood.hoodAutoAim(() -> shotMap.getAngle()),
+                indexer.runIndexer(7),
+                intake.runIntake(5),
+                intake.armUpDown()));
 
+    operator
+        .leftBumper()
+        .whileTrue(
+            Commands.parallel(
+                shooter.rawSpinShooter(-6), indexer.runIndexer(-8), intake.runIntake(-4)));
+    operator.back().whileTrue(hood.rawMoveHood(-.25));
+    operator.start().whileTrue(hood.hoodPIDMove());
     operator.b().toggleOnTrue(shooter.slowShooter());
   }
 
